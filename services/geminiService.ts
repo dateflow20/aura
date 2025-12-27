@@ -124,8 +124,8 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
             return response.text || (isJson ? "[]" : "I am unable to process that signal.");
           } catch (modelError: any) {
             console.warn(`⚠️ Gemini ${model} failed with key ending in ...${key.slice(-4)}:`, modelError);
-            if (modelError.message.includes("404") || modelError.message.includes("429")) {
-              continue; // Try next model
+            if (modelError.message.includes("404") || modelError.message.includes("429") || modelError.message.includes("400")) {
+              continue; // Try next model/key
             }
             throw modelError; // Re-throw other errors
           }
@@ -407,7 +407,7 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
           "HTTP-Referer": "https://aura-neural.app",
         },
         body: JSON.stringify({
-          model: "google/gemini-flash-1.5", // Use Gemini via OpenRouter
+          model: "meta-llama/llama-3.2-11b-vision-instruct:free", // Free fallback for vision
           messages: [
             {
               role: "user",

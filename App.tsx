@@ -267,6 +267,9 @@ const App: React.FC = () => {
       }
 
       recorder.onstop = async () => {
+        // Wait 500ms for speech recognition to finalize
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setIsProcessing(true);
         const reader = new FileReader();
