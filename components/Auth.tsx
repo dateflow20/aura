@@ -37,6 +37,13 @@ const Auth: React.FC<AuthProps> = ({ onComplete, onBack, onGuestMode }) => {
       if (signUpError) throw signUpError;
 
       if (data.user) {
+        // Check if session exists (means auto-login successful)
+        if (data.session) {
+          setMessage('Account created successfully!');
+          onComplete(email);
+          return;
+        }
+
         // Check if email confirmation is required
         if (data.user.identities && data.user.identities.length === 0) {
           setError('This email is already registered. Please sign in instead.');

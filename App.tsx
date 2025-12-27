@@ -58,7 +58,10 @@ const App: React.FC = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const transcriptionRef = useRef<string>("");
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -222,19 +225,47 @@ const App: React.FC = () => {
   const toggleRecording = async (isForChat = false) => {
     const currentRecordingState = isForChat ? isChatRecording : isRecording;
     const setRecordingState = isForChat ? setIsChatRecording : setIsRecording;
+
     if (currentRecordingState) {
+      // STOP RECORDING
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+      if (recognitionRef.current) recognitionRef.current.stop();
       setRecordingState(false);
       if (timerRef.current) clearInterval(timerRef.current);
       setRecordDuration(0);
       return;
     }
+
+    // START RECORDING
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // 1. Start MediaRecorder (for audio file)
       const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
       recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+
+      // 2. Start SpeechRecognition (for transcription)
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognitionRef.current = recognition;
+        transcriptionRef.current = "";
+
+        recognition.onresult = (event: any) => {
+          let final = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) final += event.results[i][0].transcript;
+          }
+          if (final) transcriptionRef.current += " " + final;
+        };
+        recognition.start();
+      }
+
       recorder.onstop = async () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setIsProcessing(true);
@@ -243,31 +274,59 @@ const App: React.FC = () => {
         reader.onloadend = async () => {
           const base64 = (reader.result as string).split(',')[1];
           const noteId = Math.random().toString(36).substr(2, 9);
+
           try {
-            const { tasks, transcription } = await extractTasksFromAudio(base64, 'audio/webm', todos, patterns, user || undefined);
-            if (isForChat && transcription) handleSendMessage(transcription);
-            const vNote: VoiceNote = { id: noteId, audioBase64: base64, transcription, timestamp: new Date().toISOString(), mimeType: 'audio/webm' };
+            let tasks: Todo[] = [];
+            let transcription = transcriptionRef.current.trim();
+
+            // If browser transcription worked, use it!
+            if (transcription) {
+              console.log("Using Browser Transcription:", transcription);
+              if (isForChat) {
+                handleSendMessage(transcription);
+              } else {
+                // Use text-only extraction (Reliable)
+                tasks = await extractTasks(transcription, todos, patterns, user || undefined);
+              }
+            } else {
+              // Fallback to API Audio Extraction (Unreliable currently)
+              console.log("Browser transcription empty, using API...");
+              const result = await extractTasksFromAudio(base64, 'audio/webm', todos, patterns, user || undefined);
+              tasks = result.tasks;
+              transcription = result.transcription;
+              if (isForChat && transcription) handleSendMessage(transcription);
+            }
+
+            const vNote: VoiceNote = { id: noteId, audioBase64: base64, transcription: transcription || "Audio Note", timestamp: new Date().toISOString(), mimeType: 'audio/webm' };
             await saveVoiceNote(vNote);
             setVoiceNotes(prev => ({ ...prev, [noteId]: vNote }));
-            const updatedTasks = tasks.map(t => {
-              const isNew = !todos.find(old => old.id === t.id);
-              return isNew ? { ...t, voiceNoteId: noteId } : t;
-            });
-            setTodos(updatedTasks);
+
+            if (tasks.length > 0) {
+              const updatedTasks = tasks.map(t => {
+                const isNew = !todos.find(old => old.id === t.id);
+                return isNew ? { ...t, voiceNoteId: noteId } : t;
+              });
+              setTodos(updatedTasks);
+            }
+
             if (!isForChat) showSyncMessage("Neural Signal Cached");
           } catch (e) {
             console.error("Extraction failed:", e);
           } finally {
             setIsProcessing(false);
+            transcriptionRef.current = ""; // Reset
           }
         };
         stream.getTracks().forEach(t => t.stop());
       };
+
       recorder.start();
       setRecordingState(true);
       timerRef.current = window.setInterval(() => setRecordDuration(p => p + 1), 1000);
+
     } catch (e) {
       alert("Microphone required.");
+      console.error(e);
     }
   };
 
