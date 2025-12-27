@@ -112,7 +112,7 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
       try {
         const ai = new GoogleGenAI({ apiKey: key });
         // Try Flash first, then Pro 1.5, then Pro 1.0
-        const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+        const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-1.0-pro"];
 
         for (const model of models) {
           try {
@@ -234,7 +234,7 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
     for (const key of keys) {
       try {
         const ai = new GoogleGenAI({ apiKey: key });
-        const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+        const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-1.0-pro"];
 
         for (const model of models) {
           try {
@@ -350,7 +350,7 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
     for (const key of keys) {
       try {
         const ai = new GoogleGenAI({ apiKey: key });
-        const models = ["gemini-1.5-flash", "gemini-1.5-pro"];
+        const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-1.0-pro"];
 
         for (const model of models) {
           try {
