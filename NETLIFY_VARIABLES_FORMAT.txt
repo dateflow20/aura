@@ -1,0 +1,89 @@
+===========================================
+📋 COPY-PASTE FORMAT FOR NETLIFY
+===========================================
+
+Go to: Netlify Dashboard → Your Site → Site Settings → Environment Variables
+
+Click "Add a variable" for each of these:
+
+-------------------------------------------
+Variable 1:
+-------------------------------------------
+Key:   VITE_SUPABASE_URL
+Value: [PASTE YOUR SUPABASE PROJECT URL HERE]
+
+-------------------------------------------
+Variable 2:
+-------------------------------------------
+Key:   VITE_SUPABASE_ANON_KEY
+Value: [PASTE YOUR SUPABASE ANON KEY HERE]
+
+-------------------------------------------
+Variable 3:
+-------------------------------------------
+Key:   VITE_GEMINI_API_KEY
+Value: [PASTE YOUR GEMINI API KEY HERE]
+
+-------------------------------------------
+Variable 4:
+-------------------------------------------
+Key:   VITE_DEEPSEEK_API_KEY
+Value: [PASTE YOUR DEEPSEEK API KEY HERE]
+
+-------------------------------------------
+Variable 5:
+-------------------------------------------
+Key:   VITE_OPENROUTER_API_KEY_1
+Value: [PASTE YOUR OPENROUTER KEY 1 HERE]
+
+-------------------------------------------
+Variable 6:
+-------------------------------------------
+Key:   VITE_OPENROUTER_API_KEY_2
+Value: [PASTE YOUR OPENROUTER KEY 2 HERE]
+
+-------------------------------------------
+Variable 7:
+-------------------------------------------
+Key:   VITE_GUEST_MODE
+Value: false
+
+===========================================
+
+📍 WHERE TO FIND YOUR API KEYS:
+===========================================
+
+Supabase:
+  → Go to: https://app.supabase.com
+  → Select your project
+  → Settings → API
+  → Copy "Project URL" and "anon public" key
+
+Gemini:
+  → Go to: https://aistudio.google.com/app/apikey
+  → Create API key
+  → Copy the key
+
+DeepSeek:
+  → Go to: https://platform.deepseek.com/api_keys
+  → Create new key
+  → Copy the key
+
+OpenRouter:
+  → Go to: https://openrouter.ai/keys
+  → Create API key
+  → Copy the key (create 2 keys for fallback)
+
+===========================================
+
+🚀 AFTER ADDING ALL VARIABLES:
+===========================================
+
+1. Click "Save"
+2. Go to: Deploys tab
+3. Click: "Trigger deploy"
+4. Select: "Clear cache and deploy site"
+5. Wait for deployment to complete
+6. Test your site!
+
+===========================================
