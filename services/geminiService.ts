@@ -271,7 +271,7 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
   }
 };
 
-export const chatWithAura = async (message: string, history: any[], patterns?: NeuralPattern, user?: UserProfile): Promise<string> => {
+export const chatWithAura = async (message: string, history: any[], todos: Todo[], patterns?: NeuralPattern, user?: UserProfile, mode?: any): Promise<string> => {
   try {
     // Convert history to format expected by API (if needed) or just append to prompt
     // For simplicity with our fallback wrapper, we'll just append context
