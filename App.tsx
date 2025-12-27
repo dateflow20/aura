@@ -58,6 +58,19 @@ const App: React.FC = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
+
+  // Persist Todos to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('aura_todos', JSON.stringify(todos));
+  }, [todos]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -397,7 +410,7 @@ const App: React.FC = () => {
 
         {mode === AppMode.Chat && (
           <div className="flex flex-col h-[70vh] border border-zinc-900 rounded-[3rem] overflow-hidden bg-zinc-950/50 backdrop-blur-xl">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
               {chatHistory.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] p-6 rounded-[2rem] text-lg font-bold shadow-2xl ${msg.role === 'user' ? 'bg-white text-black rounded-br-none' : 'bg-zinc-900 text-zinc-300 rounded-bl-none border border-zinc-800'}`}>{msg.content}</div>

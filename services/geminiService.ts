@@ -236,3 +236,37 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
     return { tasks: [], transcription: "Audio processing unavailable (Neural Link Error)." };
   }
 };
+
+export const extractTasksFromImage = async (base64Image: string, mimeType: string, currentTodos: Todo[]): Promise<Todo[]> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-exp",
+      contents: {
+        parts: [
+          { inlineData: { data: base64Image, mimeType: mimeType } },
+          { text: `Analyze this image and extract any clear tasks, goals, or action items. Return ONLY a JSON object with a "goals" array. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}` }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: GOAL_SCHEMA
+      }
+    });
+
+    const text = response.text();
+    if (!text) throw new Error("No response from Gemini Vision");
+
+    const parsed = JSON.parse(text);
+    return (parsed.goals || []).map((t: any) => ({
+      ...t,
+      id: Math.random().toString(36).substr(2, 9),
+      createdAt: new Date().toISOString(),
+      steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+    }));
+
+  } catch (error) {
+    console.error("Vision Processing Failed:", error);
+    throw error;
+  }
+};
