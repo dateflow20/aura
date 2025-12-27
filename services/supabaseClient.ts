@@ -3,17 +3,41 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️ Supabase credentials not found. Running in offline mode.');
-}
+// Create a dummy client if credentials are missing to prevent app crash
+export const supabase = (supabaseUrl && supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+        }
+    })
+    : {
+        auth: {
+            getSession: async () => ({ data: { session: null }, error: null }),
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+            signInWithPassword: async () => ({ data: { user: null }, error: new Error('Supabase not configured') }),
+            signUp: async () => ({ data: { user: null }, error: new Error('Supabase not configured') }),
+            signOut: async () => ({ error: null }),
+        },
+        from: () => ({
+            select: () => ({
+                eq: () => ({
+                    single: async () => ({ data: null, error: null }),
+                    order: () => ({ data: [], error: null })
+                }),
+                order: () => ({ data: [], error: null })
+            }),
+            insert: async () => ({ data: null, error: null }),
+            update: () => ({ eq: async () => ({ data: null, error: null }) }),
+            delete: () => ({ eq: async () => ({ data: null, error: null }) }),
+            upsert: async () => ({ data: null, error: null }),
+        })
+    } as any;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-    }
-});
+if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('⚠️ Supabase credentials not found. Running in offline/guest mode.');
+}
 
 // Database Types
 export interface Database {
