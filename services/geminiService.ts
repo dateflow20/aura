@@ -106,7 +106,7 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-flash-latest",
       contents: fullPrompt,
       config: config,
     });
@@ -204,7 +204,7 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-flash-latest",
       contents: {
         parts: [
           { inlineData: { data: base64Audio, mimeType: mimeType } },
@@ -241,7 +241,7 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-flash-latest",
       contents: {
         parts: [
           { inlineData: { data: base64Image, mimeType: mimeType } },
