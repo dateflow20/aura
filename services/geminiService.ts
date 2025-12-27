@@ -2,8 +2,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Todo, TodoStep, NeuralPattern, UserProfile } from "../types";
 
 /**
- * AURA NEURAL CORE - VERSION 13.0
+ * AURA NEURAL CORE - VERSION 13.1
  * Optimized for sophisticated dialogue, deep intent comprehension, and cognitive discernment.
+ * Includes robust multi-provider fallback (Gemini -> DeepSeek -> OpenRouter).
  */
 
 const getSystemInstruction = (patterns?: NeuralPattern, user?: UserProfile, isJson: boolean = true) => {
@@ -55,24 +56,6 @@ BE CONCISE. BE HELPFUL. BE HUMAN.
   return instruction;
 };
 
-const callAiWithFallback = async (prompt: string, config: any, patterns?: NeuralPattern, user?: UserProfile, isJson: boolean = true): Promise<string> => {
-  const systemPrompt = getSystemInstruction(patterns, user, isJson);
-  const fullPrompt = `${systemPrompt}\n\nUSER_SIGNAL: ${prompt}`;
-
-  try {
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: fullPrompt,
-      config: config,
-    });
-    return response.text || (isJson ? "[]" : "I am unable to process that signal.");
-  } catch (error) {
-    console.error("Neural Link Fail:", error);
-    throw error;
-  }
-};
-
 // JSON Schema for goal extraction
 const GOAL_SCHEMA = {
   type: Type.OBJECT,
@@ -115,6 +98,83 @@ const GOAL_SCHEMA = {
   required: ["goals", "transcription"]
 };
 
+const callAiWithFallback = async (prompt: string, config: any, patterns?: NeuralPattern, user?: UserProfile, isJson: boolean = true): Promise<string> => {
+  const systemPrompt = getSystemInstruction(patterns, user, isJson);
+  const fullPrompt = `${systemPrompt}\n\nUSER_SIGNAL: ${prompt}`;
+
+  // 1. Try Gemini (Primary)
+  try {
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-exp",
+      contents: fullPrompt,
+      config: config,
+    });
+    return response.text || (isJson ? "[]" : "I am unable to process that signal.");
+  } catch (geminiError: any) {
+    console.warn("⚠️ Gemini Failed, switching to DeepSeek...", geminiError);
+
+    // 2. Try DeepSeek (Fallback 1)
+    try {
+      const deepseekKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+      if (!deepseekKey) throw new Error("No DeepSeek key");
+
+      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${deepseekKey}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ],
+          response_format: isJson ? { type: "json_object" } : undefined
+        })
+      });
+
+      if (!response.ok) throw new Error(`DeepSeek Error: ${response.status}`);
+      const data = await response.json();
+      return data.choices[0].message.content;
+
+    } catch (deepseekError) {
+      console.warn("⚠️ DeepSeek Failed, switching to OpenRouter...", deepseekError);
+
+      // 3. Try OpenRouter (Fallback 2)
+      try {
+        const openRouterKey = import.meta.env.VITE_OPENROUTER_API_KEY_1;
+        if (!openRouterKey) throw new Error("No OpenRouter key");
+
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${openRouterKey}`,
+            "HTTP-Referer": "https://aura-neural.app",
+          },
+          body: JSON.stringify({
+            model: "mistralai/mistral-7b-instruct:free", // Free fallback model
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: prompt }
+            ]
+          })
+        });
+
+        if (!response.ok) throw new Error(`OpenRouter Error: ${response.status}`);
+        const data = await response.json();
+        return data.choices[0].message.content;
+
+      } catch (finalError) {
+        console.error("❌ ALL NEURAL LINKS FAILED", finalError);
+        throw finalError;
+      }
+    }
+  }
+};
+
 export const extractTasks = async (prompt: string, currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile): Promise<Todo[]> => {
   try {
     const resp = await callAiWithFallback(prompt, {
@@ -132,15 +192,19 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
       steps: (t.steps || []).map((s: any) => ({ ...s, id: s.id || Math.random().toString(36).substr(2, 5) })),
     }));
   } catch (e) {
+    console.error("Task extraction failed:", e);
     return currentTodos;
   }
 };
 
 export const extractTasksFromAudio = async (base64Audio: string, mimeType: string, currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile): Promise<{ tasks: Todo[], transcription: string }> => {
+  // Audio currently only supported by Gemini Multimodal
+  // If Gemini fails, we can't easily fallback for AUDIO processing without a separate transcription service (like Whisper)
+  // For now, we will wrap this in a try/catch to prevent app crash
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash-exp",
       contents: {
         parts: [
           { inlineData: { data: base64Audio, mimeType: mimeType } },
@@ -153,76 +217,22 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
       }
     });
 
-    const cleanedText = (response.text || "{}").replace(/```json|```/g, "").trim();
-    const result = JSON.parse(cleanedText);
+    const text = response.text();
+    if (!text) throw new Error("No response from Gemini Audio");
 
-    // Extract goals only if they exist
-    const extractedGoals = (result.goals || [])
-      .filter((g: any) => g.goal && g.goal.trim() && g.goal !== "Unresolved Intent")
-      .map((t: any) => ({
-        goal: t.goal,
-        description: t.description || undefined,
-        priority: t.priority || 'medium',
-        completed: t.completed || false,
-        dueDate: t.dueDate || undefined,
-        id: Math.random().toString(36).substr(2, 9),
-        createdAt: new Date().toISOString(),
-        steps: (t.steps || []).map((s: any) => ({
-          text: s.text,
-          completed: s.completed || false,
-          id: Math.random().toString(36).substr(2, 5)
-        })),
-      }));
-
-    return {
-      tasks: extractedGoals,
-      transcription: result.transcription || "No transcription available"
-    };
-  } catch (e) {
-    console.error("Audio extraction error:", e);
-    return { tasks: [], transcription: "Error processing audio" };
-  }
-};
-
-export const chatWithAura = async (message: string, history: any[], currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile, mode: 'insight' | 'override' = 'insight') => {
-  const prompt = `[MODE: ${mode.toUpperCase()}]
-Input: "${message}". 
-History: ${JSON.stringify(history.slice(-8))}. 
-Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}.
-Goal: Respond as AURA. Discern if they want to chat or modify their existence.`;
-
-  const resp = await callAiWithFallback(prompt, { responseMimeType: "text/plain" }, patterns, user, false);
-  return resp;
-};
-
-export const extractTasksFromImage = async (base64Image: string, mimeType: string, currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile): Promise<Todo[]> => {
-  try {
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          { inlineData: { data: base64Image, mimeType: mimeType } },
-          { text: `${getSystemInstruction(patterns, user, true)}\n\nExtract any tasks, goals, or to-do items from this image. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}` }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: GOAL_SCHEMA
-      }
-    });
-
-    const result = JSON.parse(response.text || "{}");
-    const goals = (result.goals || []).map((t: any) => ({
+    const parsed = JSON.parse(text);
+    const tasks = (parsed.goals || []).map((t: any) => ({
       ...t,
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString(),
-      steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) }))
+      steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
     }));
 
-    return [...currentTodos, ...goals];
-  } catch (e) {
-    console.error("Image extraction error:", e);
-    return currentTodos;
+    return { tasks, transcription: parsed.transcription || "Audio processed." };
+
+  } catch (error) {
+    console.error("Audio Processing Failed (No Fallback available for Audio):", error);
+    // Return empty result instead of crashing
+    return { tasks: [], transcription: "Audio processing unavailable (Neural Link Error)." };
   }
 };
