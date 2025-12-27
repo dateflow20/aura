@@ -220,22 +220,53 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
   } catch (e) {
     console.error("Task extraction failed:", e);
 
-    // ULTIMATE FALLBACK: If AI fails, just add the raw text as a goal
-    // This ensures the user's voice/text is NEVER lost.
+    // ULTIMATE FALLBACK: Smart Local Parsing
+    // If AI fails, we use a local heuristic "Mini-Brain" to parse intent.
     try {
-      // The prompt contains "USER_SIGNAL: <text>" or just the text depending on caller.
-      // But extractTasks takes 'prompt' which is usually the raw user text.
-      // Let's clean it up just in case.
-      const cleanText = prompt.replace(/USER_SIGNAL:/g, '').trim();
+      let cleanText = prompt.replace(/USER_SIGNAL:/g, '').trim();
 
       if (cleanText && cleanText.length > 0) {
+        // 1. Detect Priority
+        let priority: 'high' | 'medium' | 'low' = 'medium';
+        const lowerText = cleanText.toLowerCase();
+        if (lowerText.includes('high priority') || lowerText.includes('urgent') || lowerText.includes('asap') || lowerText.includes('important') || lowerText.includes('critical')) {
+          priority = 'high';
+        } else if (lowerText.includes('low priority') || lowerText.includes('whenever') || lowerText.includes('later')) {
+          priority = 'low';
+        }
+
+        // 2. Clean Text (Remove filler phrases)
+        const fillers = [
+          "i need to", "i want to", "have to", "please add", "add a goal to", "create a task to",
+          "remind me to", "don't forget to", "make sure to", "goal is to", "task is to",
+          "this is high priority", "this is low priority", "priority is high", "priority is low",
+          "and yeah", "um", "uh", "so"
+        ];
+
+        // Remove priority keywords from the text to clean it up
+        cleanText = cleanText.replace(/high priority|urgent|asap|important|critical|low priority/yi, '');
+
+        // Remove fillers
+        fillers.forEach(filler => {
+          const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+          cleanText = cleanText.replace(regex, '');
+        });
+
+        // Final cleanup
+        cleanText = cleanText.replace(/\s+/g, ' ').trim();
+        if (cleanText.length > 0) {
+          cleanText = cleanText.charAt(0).toUpperCase() + cleanText.slice(1); // Capitalize first letter
+        }
+
+        if (cleanText.length < 3) cleanText = prompt.replace(/USER_SIGNAL:/g, '').trim(); // Revert if we cleaned too much
+
         const fallbackGoal: Todo = {
           id: Math.random().toString(36).substr(2, 9),
           goal: cleanText,
-          priority: 'medium',
+          priority: priority,
           completed: false,
           createdAt: new Date().toISOString(),
-          steps: [] // No AI to generate steps, but that's better than nothing
+          steps: []
         };
         return [fallbackGoal, ...currentTodos];
       }
