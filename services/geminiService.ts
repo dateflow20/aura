@@ -221,55 +221,67 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
   } catch (e) {
     console.error("Task extraction failed:", e);
 
-    // ULTIMATE FALLBACK: Smart Local Parsing
-    // If AI fails, we use a local heuristic "Mini-Brain" to parse intent.
+    // ULTIMATE FALLBACK: Smart Local Parsing (Multi-Goal Support)
+    // If AI fails, we use a local heuristic "Mini-Brain" to parse intent and split multiple goals.
     try {
-      let cleanText = prompt.replace(/USER_SIGNAL:/g, '').trim();
+      let rawText = prompt.replace(/USER_SIGNAL:/g, '').trim();
 
-      if (cleanText && cleanText.length > 0) {
-        // 1. Detect Priority
-        let priority: 'high' | 'medium' | 'low' = 'medium';
-        const lowerText = cleanText.toLowerCase();
-        if (lowerText.includes('high priority') || lowerText.includes('urgent') || lowerText.includes('asap') || lowerText.includes('important') || lowerText.includes('critical')) {
-          priority = 'high';
-        } else if (lowerText.includes('low priority') || lowerText.includes('whenever') || lowerText.includes('later')) {
-          priority = 'low';
-        }
+      if (rawText && rawText.length > 0) {
+        // 1. Split by common separators (and also, then, plus, ., newlines)
+        const segments = rawText.split(/\s+(?:and\s+also|also|plus|then|next)\s+|\.\s+|\n+/i);
 
-        // 2. Clean Text (Remove filler phrases)
-        const fillers = [
-          "i need to", "i want to", "have to", "please add", "add a goal to", "create a task to",
-          "remind me to", "don't forget to", "make sure to", "goal is to", "task is to",
-          "this is high priority", "this is low priority", "priority is high", "priority is low",
-          "and yeah", "um", "uh", "so"
-        ];
+        const newGoals: Todo[] = [];
 
-        // Remove priority keywords from the text to clean it up
-        cleanText = cleanText.replace(/high priority|urgent|asap|important|critical|low priority/yi, '');
+        segments.forEach(segment => {
+          let cleanText = segment.trim();
+          if (cleanText.length < 3) return;
 
-        // Remove fillers
-        fillers.forEach(filler => {
-          const regex = new RegExp(`\\b${filler}\\b`, 'gi');
-          cleanText = cleanText.replace(regex, '');
+          // 2. Detect Priority per segment
+          let priority: 'high' | 'medium' | 'low' = 'medium';
+          const lowerText = cleanText.toLowerCase();
+          if (lowerText.includes('high priority') || lowerText.includes('urgent') || lowerText.includes('asap') || lowerText.includes('important') || lowerText.includes('critical')) {
+            priority = 'high';
+          } else if (lowerText.includes('low priority') || lowerText.includes('whenever') || lowerText.includes('later')) {
+            priority = 'low';
+          }
+
+          // 3. Clean Text (Remove filler phrases)
+          const fillers = [
+            "i need to", "i want to", "have to", "please add", "add a goal to", "create a task to",
+            "remind me to", "don't forget to", "make sure to", "goal is to", "task is to",
+            "this is high priority", "this is low priority", "priority is high", "priority is low",
+            "and yeah", "um", "uh", "so", "this is medium parity", "this is medium priority"
+          ];
+
+          // Remove priority keywords
+          cleanText = cleanText.replace(/high priority|urgent|asap|important|critical|low priority|medium priority|medium parity/yi, '');
+
+          // Remove fillers
+          fillers.forEach(filler => {
+            const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+            cleanText = cleanText.replace(regex, '');
+          });
+
+          // Final cleanup
+          cleanText = cleanText.replace(/\s+/g, ' ').trim();
+          if (cleanText.length > 0) {
+            cleanText = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+
+            // Create Goal
+            newGoals.push({
+              id: Math.random().toString(36).substr(2, 9),
+              goal: cleanText,
+              priority: priority,
+              completed: false,
+              createdAt: new Date().toISOString(),
+              steps: []
+            });
+          }
         });
 
-        // Final cleanup
-        cleanText = cleanText.replace(/\s+/g, ' ').trim();
-        if (cleanText.length > 0) {
-          cleanText = cleanText.charAt(0).toUpperCase() + cleanText.slice(1); // Capitalize first letter
+        if (newGoals.length > 0) {
+          return [...newGoals, ...currentTodos];
         }
-
-        if (cleanText.length < 3) cleanText = prompt.replace(/USER_SIGNAL:/g, '').trim(); // Revert if we cleaned too much
-
-        const fallbackGoal: Todo = {
-          id: Math.random().toString(36).substr(2, 9),
-          goal: cleanText,
-          priority: priority,
-          completed: false,
-          createdAt: new Date().toISOString(),
-          steps: []
-        };
-        return [fallbackGoal, ...currentTodos];
       }
     } catch (fallbackError) {
       console.error("Even fallback failed:", fallbackError);
