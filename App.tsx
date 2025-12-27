@@ -65,7 +65,7 @@ const App: React.FC = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chatHistory]);
+  }, [chatHistory, mode]); // Added mode to trigger on open
 
   // Persist Todos to LocalStorage
   useEffect(() => {
