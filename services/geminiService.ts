@@ -31,6 +31,7 @@ COGNITIVE PROTOCOLS:
 - If no goals are detected (casual chat), return an empty goals array but include a faithful transcription.
 - For verified goals, automatically decompose into 3-5 logical, high-impact sub-steps.
 - Provide a concise transcription of the user's spoken or written word.
+- INTELLIGENT PRIORITY: If user says "urgent", "high priority", "ASAP", or implies a deadline of today/tomorrow, set priority to 'high'. If "eventually" or "low priority", set 'low'. Default is 'medium'.
 `;
   } else {
     instruction += `
@@ -66,12 +67,12 @@ const GOAL_SCHEMA = {
       items: {
         type: Type.OBJECT,
         properties: {
-          goal: { type: Type.STRING, description: "The main task or goal (REQUIRED)" },
+          goal: { type: Type.STRING, description: "The main task or goal (REQUIRED). Clean up the text (remove 'I need to', etc.)." },
           description: { type: Type.STRING, description: "Additional details about the goal" },
           priority: {
             type: Type.STRING,
             enum: ["low", "medium", "high"],
-            description: "Priority level of the goal"
+            description: "Priority level. Set to 'high' if urgent/ASAP/today. Set to 'low' if later/whenever. Default 'medium'."
           },
           completed: { type: Type.BOOLEAN, description: "Whether the goal is completed" },
           dueDate: { type: Type.STRING, description: "Optional due date (ISO format)" },

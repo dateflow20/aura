@@ -18,6 +18,7 @@ import OfflineIndicator from './components/OfflineIndicator.tsx';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.Landing);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [mode, setMode] = useState<AppMode>(AppMode.Notes);
   const [chatMode, setChatMode] = useState<ChatSessionMode>(ChatSessionMode.Insight);
@@ -71,9 +72,12 @@ const App: React.FC = () => {
   }, [chatHistory, mode]); // Added mode to trigger on open
 
   // Persist Todos to LocalStorage
+  // Persist Todos to LocalStorage (Only after loading)
   useEffect(() => {
-    localStorage.setItem('aura_todos', JSON.stringify(todos));
-  }, [todos]);
+    if (isLoaded) {
+      localStorage.setItem('aura_todos', JSON.stringify(todos));
+    }
+  }, [todos, isLoaded]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -150,6 +154,7 @@ const App: React.FC = () => {
       }
 
       requestNotificationPermission();
+      setIsLoaded(true);
     };
     loadData();
   }, []);
