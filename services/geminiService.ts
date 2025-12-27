@@ -219,6 +219,30 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
     }));
   } catch (e) {
     console.error("Task extraction failed:", e);
+
+    // ULTIMATE FALLBACK: If AI fails, just add the raw text as a goal
+    // This ensures the user's voice/text is NEVER lost.
+    try {
+      // The prompt contains "USER_SIGNAL: <text>" or just the text depending on caller.
+      // But extractTasks takes 'prompt' which is usually the raw user text.
+      // Let's clean it up just in case.
+      const cleanText = prompt.replace(/USER_SIGNAL:/g, '').trim();
+
+      if (cleanText && cleanText.length > 0) {
+        const fallbackGoal: Todo = {
+          id: Math.random().toString(36).substr(2, 9),
+          goal: cleanText,
+          priority: 'medium',
+          completed: false,
+          createdAt: new Date().toISOString(),
+          steps: [] // No AI to generate steps, but that's better than nothing
+        };
+        return [fallbackGoal, ...currentTodos];
+      }
+    } catch (fallbackError) {
+      console.error("Even fallback failed:", fallbackError);
+    }
+
     return currentTodos;
   }
 };
