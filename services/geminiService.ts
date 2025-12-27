@@ -2,9 +2,10 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Todo, TodoStep, NeuralPattern, UserProfile } from "../types";
 
 /**
- * AURA NEURAL CORE - VERSION 13.1
+ * AURA NEURAL CORE - VERSION 13.2
  * Optimized for sophisticated dialogue, deep intent comprehension, and cognitive discernment.
  * Includes robust multi-provider fallback (Gemini -> DeepSeek -> OpenRouter).
+ * NOW INCLUDES VISION FALLBACK.
  */
 
 const getSystemInstruction = (patterns?: NeuralPattern, user?: UserProfile, isJson: boolean = true) => {
@@ -106,7 +107,7 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash-001",
+      model: "gemini-1.5-flash",
       contents: fullPrompt,
       config: config,
     });
@@ -204,7 +205,7 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash-001",
+      model: "gemini-1.5-flash",
       contents: {
         parts: [
           { inlineData: { data: base64Audio, mimeType: mimeType } },
@@ -238,14 +239,17 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
 };
 
 export const extractTasksFromImage = async (base64Image: string, mimeType: string, currentTodos: Todo[]): Promise<Todo[]> => {
+  const promptText = `Analyze this image and extract any clear tasks, goals, or action items. Return ONLY a JSON object with a "goals" array. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}`;
+
+  // 1. Try Gemini Vision (Primary)
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash-001",
+      model: "gemini-1.5-flash",
       contents: {
         parts: [
           { inlineData: { data: base64Image, mimeType: mimeType } },
-          { text: `Analyze this image and extract any clear tasks, goals, or action items. Return ONLY a JSON object with a "goals" array. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}` }
+          { text: promptText }
         ]
       },
       config: {
@@ -254,7 +258,7 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
       }
     });
 
-    const text = response.text; // Fixed: Access as property, not function
+    const text = response.text;
     if (!text) throw new Error("No response from Gemini Vision");
 
     const parsed = JSON.parse(text);
@@ -266,8 +270,54 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
     }));
 
   } catch (error) {
-    console.error("Vision Processing Failed:", error);
-    throw error;
+    console.warn("⚠️ Gemini Vision Failed, switching to OpenRouter Vision...", error);
+
+    // 2. Try OpenRouter Vision (Fallback)
+    try {
+      const openRouterKey = import.meta.env.VITE_OPENROUTER_API_KEY_1;
+      if (!openRouterKey) throw new Error("No OpenRouter key");
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openRouterKey}`,
+          "HTTP-Referer": "https://aura-neural.app",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-flash-1.5", // Use Gemini via OpenRouter
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: promptText + "\n\nReturn valid JSON only." },
+                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) throw new Error(`OpenRouter Vision Error: ${response.status}`);
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+
+      // Try to parse JSON from the response (it might be wrapped in markdown)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : content;
+      const parsed = JSON.parse(jsonStr);
+
+      return (parsed.goals || []).map((t: any) => ({
+        ...t,
+        id: Math.random().toString(36).substr(2, 9),
+        createdAt: new Date().toISOString(),
+        steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+      }));
+
+    } catch (fallbackError) {
+      console.error("❌ ALL VISION LINKS FAILED", fallbackError);
+      throw fallbackError;
+    }
   }
 };
 
