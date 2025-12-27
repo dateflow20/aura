@@ -10,75 +10,49 @@ Click "Add a variable" for each of these:
 Variable 1:
 -------------------------------------------
 Key:   VITE_SUPABASE_URL
-Value: [PASTE YOUR SUPABASE PROJECT URL HERE]
+Value: https://ipwjkziogtgtrqngvekq.supabase.co
 
 -------------------------------------------
 Variable 2:
 -------------------------------------------
 Key:   VITE_SUPABASE_ANON_KEY
-Value: [PASTE YOUR SUPABASE ANON KEY HERE]
+Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlwd2premlvZ3RndHJxbmd2ZWtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4Mjk0NDIsImV4cCI6MjA4MjQwNTQ0Mn0.iSOCFDey9FZYZblE4ixKUTJ2-TctN7F0hBVmEbtLNoo
 
 -------------------------------------------
 Variable 3:
 -------------------------------------------
 Key:   VITE_GEMINI_API_KEY
-Value: [PASTE YOUR GEMINI API KEY HERE]
-26: 
-27: -------------------------------------------
-28: Variable 3b (Optional - Backup):
-29: -------------------------------------------
-30: Key:   VITE_GEMINI_API_KEY_2
-31: Value: [PASTE YOUR SECOND GEMINI API KEY HERE]
+Value: AIzaSyAcoVqRV_1NSLlfS4uztd_t_byLU9XkYoQ
+
+-------------------------------------------
+Variable 3b (Optional - Backup):
+-------------------------------------------
+Key:   VITE_GEMINI_API_KEY_2
+Value: AIzaSyBNu8RiVZhLIQJbUIcizk0wAP7QD-3DvVE
 
 -------------------------------------------
 Variable 4:
 -------------------------------------------
 Key:   VITE_DEEPSEEK_API_KEY
-Value: [PASTE YOUR DEEPSEEK API KEY HERE]
+Value: sk-c883ea0b44744e6da3be1bd1c17e1418
 
 -------------------------------------------
 Variable 5:
 -------------------------------------------
 Key:   VITE_OPENROUTER_API_KEY_1
-Value: [PASTE YOUR OPENROUTER KEY 1 HERE]
+Value: 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
 
 -------------------------------------------
 Variable 6:
 -------------------------------------------
 Key:   VITE_OPENROUTER_API_KEY_2
-Value: [PASTE YOUR OPENROUTER KEY 2 HERE]
+Value: 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
 
 -------------------------------------------
 Variable 7:
 -------------------------------------------
 Key:   VITE_GUEST_MODE
 Value: false
-
-===========================================
-
-📍 WHERE TO FIND YOUR API KEYS:
-===========================================
-
-Supabase:
-  → Go to: https://app.supabase.com
-  → Select your project
-  → Settings → API
-  → Copy "Project URL" and "anon public" key
-
-Gemini:
-  → Go to: https://aistudio.google.com/app/apikey
-  → Create API key
-  → Copy the key
-
-DeepSeek:
-  → Go to: https://platform.deepseek.com/api_keys
-  → Create new key
-  → Copy the key
-
-OpenRouter:
-  → Go to: https://openrouter.ai/keys
-  → Create API key
-  → Copy the key (create 2 keys for fallback)
 
 ===========================================
 
