@@ -217,7 +217,7 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
       }
     });
 
-    const text = response.text();
+    const text = response.text; // Fixed: Access as property, not function
     if (!text) throw new Error("No response from Gemini Audio");
 
     const parsed = JSON.parse(text);
@@ -254,7 +254,7 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
       }
     });
 
-    const text = response.text();
+    const text = response.text; // Fixed: Access as property, not function
     if (!text) throw new Error("No response from Gemini Vision");
 
     const parsed = JSON.parse(text);
@@ -268,5 +268,23 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
   } catch (error) {
     console.error("Vision Processing Failed:", error);
     throw error;
+  }
+};
+
+export const chatWithAura = async (message: string, history: any[], patterns?: NeuralPattern, user?: UserProfile): Promise<string> => {
+  try {
+    // Convert history to format expected by API (if needed) or just append to prompt
+    // For simplicity with our fallback wrapper, we'll just append context
+    const contextPrompt = `
+PREVIOUS CONTEXT:
+${history.slice(-5).map((h: any) => `${h.role === 'user' ? 'USER' : 'AURA'}: ${h.content}`).join('\n')}
+
+USER_SIGNAL: ${message}
+`;
+
+    return await callAiWithFallback(contextPrompt, {}, patterns, user, false);
+  } catch (error) {
+    console.error("Chat Error:", error);
+    return "I am unable to process that signal right now.";
   }
 };
