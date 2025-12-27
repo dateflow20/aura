@@ -105,15 +105,40 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
 
   // 1. Try Gemini (Primary)
   try {
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: fullPrompt,
-      config: config,
-    });
-    return response.text || (isJson ? "[]" : "I am unable to process that signal.");
+    const keys = [import.meta.env.VITE_GEMINI_API_KEY, import.meta.env.VITE_GEMINI_API_KEY_2].filter(Boolean);
+    let lastError;
+
+    for (const key of keys) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: key });
+        // Try Flash first, then Pro
+        const models = ["gemini-1.5-flash", "gemini-1.5-pro"];
+
+        for (const model of models) {
+          try {
+            const response = await ai.models.generateContent({
+              model: model,
+              contents: fullPrompt,
+              config: config,
+            });
+            return response.text || (isJson ? "[]" : "I am unable to process that signal.");
+          } catch (modelError: any) {
+            console.warn(`⚠️ Gemini ${model} failed with key ending in ...${key.slice(-4)}:`, modelError);
+            if (modelError.message.includes("404") || modelError.message.includes("429")) {
+              continue; // Try next model
+            }
+            throw modelError; // Re-throw other errors
+          }
+        }
+      } catch (keyError) {
+        lastError = keyError;
+        continue; // Try next key
+      }
+    }
+    throw lastError || new Error("All Gemini keys/models failed");
+
   } catch (geminiError: any) {
-    console.warn("⚠️ Gemini Failed, switching to DeepSeek...", geminiError);
+    console.warn("⚠️ All Gemini attempts failed, switching to DeepSeek...", geminiError);
 
     // 2. Try DeepSeek (Fallback 1)
     try {
@@ -203,33 +228,54 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
   // If Gemini fails, we can't easily fallback for AUDIO processing without a separate transcription service (like Whisper)
   // For now, we will wrap this in a try/catch to prevent app crash
   try {
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: {
-        parts: [
-          { inlineData: { data: base64Audio, mimeType: mimeType } },
-          { text: `${getSystemInstruction(patterns, user, true)}\n\nListen to this audio and extract any clear goals or tasks mentioned. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}\n\nIMPORTANT: Provide a transcription and extract ONLY explicit goals. If the user is just chatting or venting, return empty goals array.` }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: GOAL_SCHEMA
+    const keys = [import.meta.env.VITE_GEMINI_API_KEY, import.meta.env.VITE_GEMINI_API_KEY_2].filter(Boolean);
+    let lastError;
+
+    for (const key of keys) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: key });
+        const models = ["gemini-1.5-flash", "gemini-1.5-pro"];
+
+        for (const model of models) {
+          try {
+            const response = await ai.models.generateContent({
+              model: model,
+              contents: {
+                parts: [
+                  { inlineData: { data: base64Audio, mimeType: mimeType } },
+                  { text: `${getSystemInstruction(patterns, user, true)}\n\nListen to this audio and extract any clear goals or tasks mentioned. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}\n\nIMPORTANT: Provide a transcription and extract ONLY explicit goals. If the user is just chatting or venting, return empty goals array.` }
+                ]
+              },
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: GOAL_SCHEMA
+              }
+            });
+
+            const text = response.text;
+            if (!text) throw new Error("No response from Gemini Audio");
+
+            const parsed = JSON.parse(text);
+            const tasks = (parsed.goals || []).map((t: any) => ({
+              ...t,
+              id: Math.random().toString(36).substr(2, 9),
+              createdAt: new Date().toISOString(),
+              steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+            }));
+
+            return { tasks, transcription: parsed.transcription || "Audio processed." };
+          } catch (modelError: any) {
+            console.warn(`⚠️ Gemini Audio ${model} failed:`, modelError);
+            if (modelError.message.includes("404") || modelError.message.includes("429")) continue;
+            throw modelError;
+          }
+        }
+      } catch (keyError) {
+        lastError = keyError;
+        continue;
       }
-    });
-
-    const text = response.text; // Fixed: Access as property, not function
-    if (!text) throw new Error("No response from Gemini Audio");
-
-    const parsed = JSON.parse(text);
-    const tasks = (parsed.goals || []).map((t: any) => ({
-      ...t,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
-    }));
-
-    return { tasks, transcription: parsed.transcription || "Audio processed." };
+    }
+    throw lastError || new Error("All Gemini Audio attempts failed");
 
   } catch (error) {
     console.error("Audio Processing Failed (No Fallback available for Audio):", error);
@@ -243,31 +289,52 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
 
   // 1. Try Gemini Vision (Primary)
   try {
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: {
-        parts: [
-          { inlineData: { data: base64Image, mimeType: mimeType } },
-          { text: promptText }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: GOAL_SCHEMA
+    const keys = [import.meta.env.VITE_GEMINI_API_KEY, import.meta.env.VITE_GEMINI_API_KEY_2].filter(Boolean);
+    let lastError;
+
+    for (const key of keys) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: key });
+        const models = ["gemini-1.5-flash", "gemini-1.5-pro"];
+
+        for (const model of models) {
+          try {
+            const response = await ai.models.generateContent({
+              model: model,
+              contents: {
+                parts: [
+                  { inlineData: { data: base64Image, mimeType: mimeType } },
+                  { text: promptText }
+                ]
+              },
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: GOAL_SCHEMA
+              }
+            });
+
+            const text = response.text;
+            if (!text) throw new Error("No response from Gemini Vision");
+
+            const parsed = JSON.parse(text);
+            return (parsed.goals || []).map((t: any) => ({
+              ...t,
+              id: Math.random().toString(36).substr(2, 9),
+              createdAt: new Date().toISOString(),
+              steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+            }));
+          } catch (modelError: any) {
+            console.warn(`⚠️ Gemini Vision ${model} failed:`, modelError);
+            if (modelError.message.includes("404") || modelError.message.includes("429")) continue;
+            throw modelError;
+          }
+        }
+      } catch (keyError) {
+        lastError = keyError;
+        continue;
       }
-    });
-
-    const text = response.text;
-    if (!text) throw new Error("No response from Gemini Vision");
-
-    const parsed = JSON.parse(text);
-    return (parsed.goals || []).map((t: any) => ({
-      ...t,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
-    }));
+    }
+    throw lastError || new Error("All Gemini Vision attempts failed");
 
   } catch (error) {
     console.warn("⚠️ Gemini Vision Failed, switching to OpenRouter Vision...", error);

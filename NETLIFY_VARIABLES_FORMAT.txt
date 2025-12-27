@@ -23,6 +23,12 @@ Variable 3:
 -------------------------------------------
 Key:   VITE_GEMINI_API_KEY
 Value: [PASTE YOUR GEMINI API KEY HERE]
+26: 
+27: -------------------------------------------
+28: Variable 3b (Optional - Backup):
+29: -------------------------------------------
+30: Key:   VITE_GEMINI_API_KEY_2
+31: Value: [PASTE YOUR SECOND GEMINI API KEY HERE]
 
 -------------------------------------------
 Variable 4:
