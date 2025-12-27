@@ -1,0 +1,8 @@
+{
+  "name": "AURA Neural System",
+  "description": "A futuristic voice-first neural organizer that uses Gemini AI to orchestrate your existence through natural conversation.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

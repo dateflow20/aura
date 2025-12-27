@@ -1,0 +1,29 @@
+# 🔐 NETLIFY ENVIRONMENT VARIABLES
+# Copy and paste these into Netlify Dashboard → Site Settings → Environment Variables
+
+# ============================================
+# REPLACE THE VALUES WITH YOUR ACTUAL KEYS!
+# ============================================
+
+VITE_SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+VITE_GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+VITE_DEEPSEEK_API_KEY=YOUR_DEEPSEEK_API_KEY
+VITE_OPENROUTER_API_KEY_1=YOUR_OPENROUTER_KEY_1
+VITE_OPENROUTER_API_KEY_2=YOUR_OPENROUTER_KEY_2
+VITE_GUEST_MODE=false
+
+# ============================================
+# INSTRUCTIONS FOR NETLIFY:
+# ============================================
+# 1. Go to: https://app.netlify.com → Your Site → Site Settings
+# 2. Click: Environment Variables (in sidebar)
+# 3. Click: "Add a variable"
+# 4. Add each variable above (name and value)
+# 5. Click: "Deploy" → "Trigger deploy" → "Clear cache and deploy site"
+#
+# WHERE TO FIND YOUR KEYS:
+# - Supabase: https://app.supabase.com → Project Settings → API
+# - Gemini: https://aistudio.google.com/app/apikey
+# - DeepSeek: https://platform.deepseek.com/api_keys
+# - OpenRouter: https://openrouter.ai/keys
