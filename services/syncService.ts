@@ -6,9 +6,14 @@ const isSupabaseConfigured = () => {
     return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 };
 
+// Check if running in Guest Mode
+const isGuestMode = () => {
+    return import.meta.env.VITE_GUEST_MODE === 'true';
+};
+
 // Get current user ID
 const getUserId = async () => {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured() || isGuestMode()) return null;
 
     const { data: { user } } = await supabase.auth.getUser();
     return user?.id || null;
@@ -18,6 +23,7 @@ const getUserId = async () => {
 
 export const syncTodosToCloud = async (todos: Todo[]): Promise<boolean> => {
     try {
+        if (isGuestMode()) return false;
         if (!isSupabaseConfigured()) return false;
 
         const userId = await getUserId();
@@ -72,6 +78,7 @@ export const syncTodosToCloud = async (todos: Todo[]): Promise<boolean> => {
 
 export const syncTodosFromCloud = async (): Promise<Todo[] | null> => {
     try {
+        if (isGuestMode()) return null;
         if (!isSupabaseConfigured()) return null;
 
         const userId = await getUserId();
@@ -128,9 +135,10 @@ export const syncTodosFromCloud = async (): Promise<Todo[] | null> => {
 
 export const syncSettingsToCloud = async (userId: string, settings: AuraSettings): Promise<boolean> => {
     try {
+        if (isGuestMode()) return false;
         if (!isSupabaseConfigured()) return false;
         if (!userId || userId === 'undefined') {
-            console.warn('⚠️ Cannot sync settings: Invalid user ID');
+            // In guest mode, this is expected, so we don't warn
             return false;
         }
 
@@ -159,9 +167,9 @@ export const syncSettingsToCloud = async (userId: string, settings: AuraSettings
 
 export const syncSettingsFromCloud = async (userId: string): Promise<AuraSettings | null> => {
     try {
+        if (isGuestMode()) return null;
         if (!isSupabaseConfigured()) return null;
         if (!userId || userId === 'undefined') {
-            console.warn('⚠️ Cannot sync settings: Invalid user ID');
             return null;
         }
 
@@ -201,6 +209,7 @@ export const syncSettingsFromCloud = async (userId: string): Promise<AuraSetting
 
 export const syncProfileToCloud = async (profile: UserProfile): Promise<boolean> => {
     try {
+        if (isGuestMode()) return false;
         if (!isSupabaseConfigured()) return false;
 
         const userId = await getUserId();
