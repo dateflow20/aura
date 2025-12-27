@@ -233,8 +233,8 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
 
   } catch (error) {
     console.error("Audio Processing Failed (No Fallback available for Audio):", error);
-    // Return empty result instead of crashing
-    return { tasks: [], transcription: "Audio processing unavailable (Neural Link Error)." };
+    // Return friendly result instead of crashing
+    return { tasks: [], transcription: "Voice system offline. Please type your request." };
   }
 };
 
