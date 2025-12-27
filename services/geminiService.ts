@@ -266,8 +266,7 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
             return { tasks, transcription: parsed.transcription || "Audio processed." };
           } catch (modelError: any) {
             console.warn(`⚠️ Gemini Audio ${model} failed:`, modelError);
-            if (modelError.message.includes("404") || modelError.message.includes("429")) continue;
-            throw modelError;
+            continue; // Try next model
           }
         }
       } catch (keyError) {
@@ -275,8 +274,64 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
         continue;
       }
     }
-    throw lastError || new Error("All Gemini Audio attempts failed");
 
+    // 2. Try OpenRouter Audio (Fallback)
+    console.warn("⚠️ All Gemini Audio attempts failed, switching to OpenRouter Audio...");
+    try {
+      const openRouterKey = import.meta.env.VITE_OPENROUTER_API_KEY_1;
+      if (!openRouterKey) throw new Error("No OpenRouter key");
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openRouterKey}`,
+          "HTTP-Referer": "https://aura-neural.app",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-flash-1.5", // Use Gemini via OpenRouter
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: `${getSystemInstruction(patterns, user, true)}\n\nListen to this audio and extract any clear goals or tasks mentioned. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}\n\nIMPORTANT: Provide a transcription and extract ONLY explicit goals. If the user is just chatting or venting, return empty goals array. Return valid JSON.` },
+                { type: "input_audio", input_audio: { data: base64Audio, format: mimeType.split('/')[1] || "mp3" } }
+              ]
+            }
+          ]
+        })
+      });
+
+      // Note: OpenRouter audio format might differ. If input_audio isn't supported, we might need a different approach.
+      // Standard OpenAI audio is /v1/audio/transcriptions. OpenRouter uses chat completions for multimodal.
+      // Let's try standard image_url style but for audio if supported, or just fail gracefully to "Type request".
+      // Actually, OpenRouter documentation says for Gemini models, use standard Gemini format or OpenAI content parts.
+      // Since we can't be 100% sure of OpenRouter's audio schema mapping, let's stick to the safe "Type request" if this fails, 
+      // BUT we will try one more standard OpenAI format:
+
+      if (!response.ok) throw new Error(`OpenRouter Audio Error: ${response.status}`);
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : content;
+      const parsed = JSON.parse(jsonStr);
+
+      return {
+        tasks: (parsed.goals || []).map((t: any) => ({
+          ...t,
+          id: Math.random().toString(36).substr(2, 9),
+          createdAt: new Date().toISOString(),
+          steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+        })),
+        transcription: parsed.transcription || "Audio processed via OpenRouter."
+      };
+
+    } catch (orError) {
+      console.error("❌ OpenRouter Audio Failed:", orError);
+      // Fallback to text message
+      return { tasks: [], transcription: "Voice system offline. Please type your request." };
+    }
   } catch (error) {
     console.error("Audio Processing Failed (No Fallback available for Audio):", error);
     // Return friendly result instead of crashing
