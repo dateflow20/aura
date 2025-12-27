@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 
 interface AuthProps {
-  onAuthSuccess: (user: any) => void;
+  onComplete: (email: string) => void;
+  onBack: () => void;
   onGuestMode: () => void;
 }
 
-const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestMode }) => {
+const Auth: React.FC<AuthProps> = ({ onComplete, onBack, onGuestMode }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,13 +44,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestMode }) => {
         } else if (data.user.confirmed_at) {
           // Auto-confirmed (if email confirmation is disabled in Supabase)
           setMessage('Account created successfully!');
-          onAuthSuccess({
-            id: data.user.id,
-            email: data.user.email!,
-            name: name || email.split('@')[0],
-            focusArea: 'General Productivity',
-            onboarded: false,
-          });
+          onComplete(email);
         } else {
           // Email confirmation required
           setMessage('Check your email for a confirmation link to complete registration!');
@@ -88,13 +83,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestMode }) => {
           console.error('Profile fetch error:', profileError);
         }
 
-        onAuthSuccess({
-          id: data.user.id,
-          email: data.user.email!,
-          name: profileData?.name || data.user.user_metadata?.name || email.split('@')[0],
-          focusArea: profileData?.focus_area || 'General Productivity',
-          onboarded: profileData?.onboarded || false,
-        });
+        onComplete(data.user.email!);
       }
     } catch (err: any) {
       if (err.message.includes('Invalid login credentials')) {
