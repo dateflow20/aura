@@ -1,8 +1,8 @@
-// AURA Neural System - Service Worker v1.0
-// Offline-First Progressive Web App
+// AURA Neural System - Service Worker v1.2
+// Offline-First Progressive Web App with Smart Caching
 
-const CACHE_NAME = 'aura-neural-v1.1'; // Incremented version
-const RUNTIME_CACHE = 'aura-runtime-v1.1';
+const CACHE_NAME = 'aura-neural-v1.2'; // Incremented version
+const RUNTIME_CACHE = 'aura-runtime-v1.2';
 
 // Files to cache immediately on install
 const STATIC_ASSETS = [
@@ -16,7 +16,7 @@ const STATIC_ASSETS = [
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing service worker...');
+    console.log('[SW] Installing service worker v1.2...');
     self.skipWaiting(); // Force immediate activation
 
     event.waitUntil(
@@ -30,7 +30,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating service worker...');
+    console.log('[SW] Activating service worker v1.2...');
 
     event.waitUntil(
         caches.keys()
@@ -45,42 +45,75 @@ self.addEventListener('activate', (event) => {
                 );
             })
             .then(() => {
-                console.log('[SW] Activation complete');
+                console.log('[SW] Activation complete, taking control');
                 return self.clients.claim(); // Take control of all clients immediately
             })
     );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - smart caching strategy
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip cross-origin requests
-    if (url.origin !== location.origin) {
-        if (request.method === 'GET') {
-            event.respondWith(
-                fetch(request)
-                    .then((response) => {
-                        const responseToCache = response.clone();
-                        caches.open(RUNTIME_CACHE).then((cache) => {
-                            cache.put(request, responseToCache);
-                        });
-                        return response;
-                    })
-                    .catch(() => {
-                        return caches.match(request);
-                    })
-            );
-        }
+    // Skip non-GET requests
+    if (request.method !== 'GET') {
         return;
     }
 
-    // For same-origin requests, use cache-first strategy
+    // Skip cross-origin requests (except for Google Fonts, etc.)
+    if (url.origin !== location.origin) {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    const responseToCache = response.clone();
+                    caches.open(RUNTIME_CACHE).then((cache) => {
+                        cache.put(request, responseToCache);
+                    });
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(request);
+                })
+        );
+        return;
+    }
+
+    // For JavaScript and CSS files: NETWORK-FIRST (to prevent stale code issues)
+    if (request.destination === 'script' || request.destination === 'style' || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.tsx') || url.pathname.endsWith('.ts')) {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    // Only cache successful responses
+                    if (response && response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(request, responseToCache);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    // Fallback to cache if network fails
+                    return caches.match(request);
+                })
+        );
+        return;
+    }
+
+    // For everything else (HTML, images, etc.): CACHE-FIRST
     event.respondWith(
         caches.match(request)
             .then((cachedResponse) => {
                 if (cachedResponse) {
+                    // Return cached version but update cache in background
+                    fetch(request).then((response) => {
+                        if (response && response.status === 200) {
+                            caches.open(CACHE_NAME).then((cache) => {
+                                cache.put(request, response);
+                            });
+                        }
+                    }).catch(() => { });
                     return cachedResponse;
                 }
 
@@ -91,7 +124,7 @@ self.addEventListener('fetch', (event) => {
                         }
 
                         const responseToCache = response.clone();
-                        caches.open(request.method === 'GET' ? CACHE_NAME : RUNTIME_CACHE)
+                        caches.open(CACHE_NAME)
                             .then((cache) => {
                                 cache.put(request, responseToCache);
                             });
