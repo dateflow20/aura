@@ -142,7 +142,8 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onClose, todos, settings, onTasks
                       goal: (fc.args as any).goal,
                       priority: (fc.args as any).priority || 'medium',
                       completed: false,
-                      createdAt: new Date().toISOString()
+                      createdAt: new Date().toISOString(),
+                      steps: []
                     }]);
                     result = "Intent registered successfully. I have updated your neural registry.";
                   }
@@ -377,12 +378,38 @@ CONVERSATIONAL DISCERNMENT PROTOCOL:
               </div>
             ) : (
               [...todos].reverse().map(t => (
-                <div key={t.id} className="p-6 bg-zinc-900/30 border border-white/5 rounded-[2rem] hover:border-white/10 transition-all">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${t.priority === 'high' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{t.priority}</span>
-                    <span className="text-[8px] text-zinc-600 font-bold uppercase">{new Date(t.createdAt).toLocaleTimeString()}</span>
+                <div key={t.id} className={`p-6 bg-zinc-900/30 border border-white/5 rounded-[2rem] hover:border-white/10 transition-all group flex items-center gap-4 ${t.completed ? 'opacity-40' : ''}`}>
+                  {/* Checkbox to toggle completion */}
+                  <button
+                    onClick={() => {
+                      const updated = todos.map(todo => todo.id === t.id ? { ...todo, completed: !todo.completed } : todo);
+                      onTasksUpdated(updated);
+                    }}
+                    className={`flex-shrink-0 w-7 h-7 rounded-lg border-2 transition-all ${t.completed ? 'bg-white border-white' : 'border-zinc-700 hover:border-zinc-500'}`}
+                  >
+                    {t.completed && <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${t.priority === 'high' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{t.priority}</span>
+                      <span className="text-[8px] text-zinc-600 font-bold uppercase">{new Date(t.createdAt).toLocaleTimeString()}</span>
+                    </div>
+                    <p className={`font-bold text-lg ${t.completed ? 'text-zinc-600 line-through' : 'text-white/90'}`}>{t.goal}</p>
                   </div>
-                  <p className="font-bold text-lg text-white/90">{t.goal}</p>
+
+                  {/* Delete button */}
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Delete goal: "${t.goal}"?`)) {
+                        const updated = todos.filter(todo => todo.id !== t.id);
+                        onTasksUpdated(updated);
+                      }
+                    }}
+                    className="flex-shrink-0 p-2 text-zinc-700 hover:text-red-500 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                 </div>
               ))
             )}

@@ -71,13 +71,7 @@ const App: React.FC = () => {
     }
   }, [chatHistory, mode]); // Added mode to trigger on open
 
-  // Persist Todos to LocalStorage
-  // Persist Todos to LocalStorage (Only after loading)
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('aura_todos', JSON.stringify(todos));
-    }
-  }, [todos, isLoaded]);
+  // Persist Todos to LocalStorage (handled in comprehensive useEffect below)
 
   useEffect(() => {
     const loadData = async () => {
@@ -132,9 +126,25 @@ const App: React.FC = () => {
       // Try to load from cloud (if user is authenticated)
       if (savedUser && !guestMode) {
         const cloudTodos = await syncTodosFromCloud();
-        if (cloudTodos) {
-          setTodos(cloudTodos);
-          localStorage.setItem('aura_todos', JSON.stringify(cloudTodos));
+        if (cloudTodos && cloudTodos.length > 0) {
+          // Merge cloud and local todos by ID to prevent data loss
+          const localTodos = savedTodos ? JSON.parse(savedTodos) : [];
+          const todoMap = new Map();
+
+          // Add cloud todos first
+          cloudTodos.forEach(t => todoMap.set(t.id, t));
+
+          // Add/update with local todos (local takes precedence if more recent)
+          localTodos.forEach((t: any) => {
+            const existing = todoMap.get(t.id);
+            if (!existing || new Date(t.createdAt || 0) > new Date(existing.createdAt || 0)) {
+              todoMap.set(t.id, t);
+            }
+          });
+
+          const mergedTodos = Array.from(todoMap.values()).map((t: any) => ({ ...t, goal: t.goal || t.task }));
+          setTodos(mergedTodos);
+          localStorage.setItem('aura_todos', JSON.stringify(mergedTodos));
         }
 
         const u = JSON.parse(savedUser);
@@ -161,6 +171,9 @@ const App: React.FC = () => {
 
   // Auto-save to localStorage and cloud sync
   useEffect(() => {
+    // Only save after initial data load to prevent overwriting with empty state
+    if (!isLoaded) return;
+
     localStorage.setItem('aura_todos', JSON.stringify(todos));
     localStorage.setItem('aura_settings', JSON.stringify(settings));
     localStorage.setItem('aura_chat_history', JSON.stringify(chatHistory));
@@ -174,7 +187,7 @@ const App: React.FC = () => {
         await syncSettingsToCloud(user.id || user.email, settings);
       });
     }
-  }, [todos, settings, user, chatHistory, voiceHistory]);
+  }, [todos, settings, user, chatHistory, voiceHistory, isLoaded]);
 
   const showSyncMessage = (msg: string, type: 'sync' | 'reminder' | 'learning' = 'sync') => {
     setSyncNotification({ msg, type });
