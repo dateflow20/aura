@@ -467,8 +467,37 @@ const App: React.FC = () => {
             </div>
             <div className="space-y-4">
               {todos.filter(t => showCompleted ? true : !t.completed).map(t => (
-                <div key={t.id} onClick={() => setEditingTodo(t)} className={`p-6 bg-zinc-900/40 border border-zinc-900 rounded-[2.5rem] flex items-center gap-5 cursor-pointer hover:border-zinc-700 transition-all ${t.completed ? 'opacity-40 grayscale' : ''}`}>
-                  <div className="flex-1 min-w-0"><h3 className="font-black text-xl truncate text-white">{t.goal}</h3></div>
+                <div key={t.id} className={`p-6 bg-zinc-900/40 border border-zinc-900 rounded-[2.5rem] flex items-center gap-5 hover:border-zinc-700 transition-all group ${t.completed ? 'opacity-40 grayscale' : ''}`}>
+                  {/* Checkbox to toggle completion */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTodos(prev => prev.map(todo => todo.id === t.id ? { ...todo, completed: !todo.completed } : todo));
+                      showSyncMessage(t.completed ? "Goal Reactivated" : "Goal Completed");
+                    }}
+                    className={`flex-shrink-0 w-8 h-8 rounded-lg border-2 transition-all ${t.completed ? 'bg-white border-white' : 'border-zinc-700 hover:border-zinc-500'}`}
+                  >
+                    {t.completed && <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                  </button>
+
+                  {/* Goal text - clickable to open edit modal */}
+                  <div onClick={() => setEditingTodo(t)} className="flex-1 min-w-0 cursor-pointer">
+                    <h3 className={`font-black text-xl truncate ${t.completed ? 'text-zinc-600 line-through' : 'text-white'}`}>{t.goal}</h3>
+                  </div>
+
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Delete goal: "${t.goal}"?`)) {
+                        setTodos(prev => prev.filter(todo => todo.id !== t.id));
+                        showSyncMessage("Goal Deleted");
+                      }
+                    }}
+                    className="flex-shrink-0 p-2 text-zinc-700 hover:text-red-500 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                 </div>
               ))}
             </div>
@@ -536,7 +565,7 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {editingTodo && <EditTaskModal todo={editingTodo} onClose={() => setEditingTodo(null)} onSave={(ut) => setTodos(p => p.map(t => t.id === ut.id ? ut : t))} onSyncCalendar={() => { }} />}
+      {editingTodo && <EditTaskModal todo={editingTodo} onClose={() => setEditingTodo(null)} onSave={(ut) => setTodos(p => p.map(t => t.id === ut.id ? ut : t))} onSyncCalendar={() => { }} onDelete={(id) => { setTodos(prev => prev.filter(t => t.id !== id)); showSyncMessage("Goal Deleted"); }} />}
 
       <button onClick={() => setMode(AppMode.Voice)} className="fixed bottom-28 right-6 z-[60] w-16 h-16 rounded-full bg-white text-black flex items-center justify-center shadow-2xl hover:scale-110 transition-all">
         <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>

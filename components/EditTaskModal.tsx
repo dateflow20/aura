@@ -7,13 +7,14 @@ interface EditTaskModalProps {
   onSave: (updatedTodo: Todo) => void;
   onClose: () => void;
   onSyncCalendar: (todo: Todo) => void;
+  onDelete?: (todoId: string) => void;
 }
 
-const EditTaskModal: React.FC<EditTaskModalProps> = ({ todo, onSave, onClose, onSyncCalendar }) => {
+const EditTaskModal: React.FC<EditTaskModalProps> = ({ todo, onSave, onClose, onSyncCalendar, onDelete }) => {
   const [goal, setGoal] = useState(todo.goal);
   const [description, setDescription] = useState(todo.description || '');
   const [priority, setPriority] = useState(todo.priority);
-  
+
   const formatForInput = (dateStr?: string) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -62,18 +63,17 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ todo, onSave, onClose, on
       <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/40">
           <div className="flex-1">
-             <div className="flex items-center gap-3 mb-1">
-                <span className={`px-2 py-1 rounded text-[10px] uppercase font-black tracking-widest ${
-                  priority === 'high' ? 'bg-red-500 text-white' : priority === 'medium' ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'
+            <div className="flex items-center gap-3 mb-1">
+              <span className={`px-2 py-1 rounded text-[10px] uppercase font-black tracking-widest ${priority === 'high' ? 'bg-red-500 text-white' : priority === 'medium' ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'
                 }`}>
-                  {priority} Priority
-                </span>
-             </div>
-             {isEditing ? (
-               <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} className="text-2xl font-bold bg-transparent border-none outline-none text-white w-full p-0" placeholder="Goal name" />
-             ) : (
-               <h2 className="text-2xl font-bold text-white">{goal}</h2>
-             )}
+                {priority} Priority
+              </span>
+            </div>
+            {isEditing ? (
+              <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} className="text-2xl font-bold bg-transparent border-none outline-none text-white w-full p-0" placeholder="Goal name" />
+            ) : (
+              <h2 className="text-2xl font-bold text-white">{goal}</h2>
+            )}
           </div>
           <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white transition-colors"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
@@ -105,6 +105,19 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ todo, onSave, onClose, on
 
         <div className="p-6 border-t border-zinc-800 bg-zinc-950/40 flex gap-4">
           <button onClick={() => setIsEditing(!isEditing)} className="px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-zinc-800 text-zinc-400">{isEditing ? 'Lock' : 'Edit'}</button>
+          {onDelete && (
+            <button
+              onClick={() => {
+                if (window.confirm(`Delete goal: "${todo.goal}"?`)) {
+                  onDelete(todo.id);
+                  onClose();
+                }
+              }}
+              className="px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-red-900/20 text-red-500 hover:bg-red-900/40 transition-all"
+            >
+              Delete
+            </button>
+          )}
           <button onClick={() => handleSave()} className="flex-1 px-8 py-4 bg-white text-black rounded-2xl font-black text-[10px] uppercase tracking-widest">Commit Changes</button>
         </div>
       </div>
