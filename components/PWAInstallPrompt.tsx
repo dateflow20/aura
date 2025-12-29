@@ -83,12 +83,12 @@ const PWAInstallPrompt: React.FC = () => {
                 <div className="w-full max-w-md bg-zinc-900 rounded-[2.5rem] p-8 border border-zinc-800">
                     <div className="text-center space-y-6">
                         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto">
-                            <span className="text-3xl font-black text-black">A</span>
+                            <span className="text-3xl font-black text-black">G</span>
                         </div>
 
                         <div>
                             <h2 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">
-                                Install AURA
+                                Install GTD
                             </h2>
                             <p className="text-sm text-zinc-400">
                                 Add to your home screen for the best experience
@@ -150,11 +150,11 @@ const PWAInstallPrompt: React.FC = () => {
             <div className="max-w-md mx-auto bg-zinc-900 rounded-[2rem] p-6 border-2 border-zinc-800 shadow-2xl">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
-                        <span className="text-2xl font-black text-black">A</span>
+                        <span className="text-2xl font-black text-black">G</span>
                     </div>
 
                     <div className="flex-1">
-                        <h3 className="font-black text-white text-sm uppercase tracking-wide">Install AURA</h3>
+                        <h3 className="font-black text-white text-sm uppercase tracking-wide">Install GTD</h3>
                         <p className="text-xs text-zinc-400 mt-0.5">
                             {isIOS ? 'Add to your home screen' : 'Get the app for faster access'}
                         </p>

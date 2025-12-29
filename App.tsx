@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Todo, ChatMessage, AppMode, AuraSettings, AppState, UserProfile, NeuralPattern, ChatSessionMode, VoiceNote } from './types';
-import { extractTasks, chatWithAura, extractTasksFromAudio } from './services/geminiService';
+import { extractTasks, chatWithGTD, extractTasksFromAudio } from './services/geminiService';
 import { scheduleTaskReminders, requestNotificationPermission } from './services/notificationService';
 import { saveVoiceNote, getAllVoiceNotes, deleteVoiceNote as dbDeleteVoiceNote } from './services/db';
 import { syncTodosToCloud, syncTodosFromCloud, syncSettingsToCloud, syncSettingsFromCloud, debouncedSync } from './services/syncService';
@@ -359,7 +359,7 @@ const App: React.FC = () => {
     setInputValue('');
     setIsProcessing(true);
     try {
-      const responseText = await chatWithAura(msg, chatHistory, todos, patterns, user || undefined, chatMode);
+      const responseText = await chatWithGTD(msg, chatHistory, todos, patterns, user || undefined, chatMode);
       setChatHistory(prev => [...prev, { id: Date.now().toString(), role: 'model', content: responseText, timestamp: new Date().toISOString() }]);
       if (chatMode === ChatSessionMode.Override) {
         const updated = await extractTasks(msg, todos, patterns, user || undefined);
@@ -399,8 +399,8 @@ const App: React.FC = () => {
     <div className={`min-h-screen ${getThemeClass('bg-zinc-50 text-zinc-900', 'bg-black text-zinc-100')} flex flex-col transition-all duration-500 font-['Inter']`}>
       <header className="h-20 border-b border-zinc-900 flex items-center justify-between px-6 backdrop-blur-xl sticky top-0 z-50 bg-black/60">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-black">A</div>
-          <div><h1 className="text-xl font-bold tracking-tighter uppercase italic">AURA</h1></div>
+          <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-black">G</div>
+          <div><h1 className="text-xl font-bold tracking-tighter uppercase italic">GTD</h1></div>
         </div>
 
         {/* Settings Button */}
@@ -527,7 +527,7 @@ const App: React.FC = () => {
               ))}
               {isProcessing && (
                 <div className="flex justify-start animate-pulse">
-                  <div className="bg-zinc-900/50 p-6 rounded-[2rem] rounded-bl-none border border-zinc-800/50 text-zinc-500 text-xs">AURA thinking...</div>
+                  <div className="bg-zinc-900/50 p-6 rounded-[2rem] rounded-bl-none border border-zinc-800/50 text-zinc-500 text-xs">GTD thinking...</div>
                 </div>
               )}
             </div>

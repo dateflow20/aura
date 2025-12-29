@@ -1,6 +1,6 @@
 {
-    "name": "AURA Neural System",
-    "short_name": "AURA",
+    "name": "GetThingsDone",
+    "short_name": "GTD",
     "description": "Adaptive AI Companion - Voice-first productivity assistant with neural task management",
     "start_url": "/",
     "display": "standalone",
@@ -50,7 +50,7 @@
         {
             "name": "Voice Mode",
             "short_name": "Voice",
-            "description": "Open live voice conversation with AURA",
+            "description": "Open live voice conversation with GTD",
             "url": "/?mode=voice",
             "icons": [
                 {

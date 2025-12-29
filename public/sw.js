@@ -1,8 +1,8 @@
-// AURA Neural System - Service Worker v1.2
+// GetThingsDone - Service Worker v1.3
 // Offline-First Progressive Web App with Smart Caching
 
-const CACHE_NAME = 'aura-neural-v1.2'; // Incremented version
-const RUNTIME_CACHE = 'aura-runtime-v1.2';
+const CACHE_NAME = 'gtd-neural-v1.3'; // Incremented version
+const RUNTIME_CACHE = 'gtd-runtime-v1.3';
 
 // Files to cache immediately on install
 const STATIC_ASSETS = [

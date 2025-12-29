@@ -1,7 +1,7 @@
 
 import { VoiceNote } from '../types';
 
-const DB_NAME = 'AuraDB';
+const DB_NAME = 'GTDDB';
 const STORE_NAME = 'voiceNotes';
 const DB_VERSION = 1;
 

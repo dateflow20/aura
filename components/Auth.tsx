@@ -136,9 +136,9 @@ const Auth: React.FC<AuthProps> = ({ onComplete, onBack, onGuestMode }) => {
         {/* Logo */}
         <div className="text-center">
           <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <span className="text-4xl font-black text-black">A</span>
+            <span className="text-4xl font-black text-black">G</span>
           </div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter">AURA</h1>
+          <h1 className="text-4xl font-black uppercase tracking-tighter">GTD</h1>
           <p className="text-sm text-zinc-500 mt-2">Neural System Authentication</p>
         </div>
 

@@ -56,7 +56,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                             System Settings
                         </h2>
                         <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-zinc-600' : 'text-zinc-400'} mt-1`}>
-                            Configure AURA Neural Interface
+                            Configure GTD Neural Interface
                         </p>
                     </div>
                     <button
@@ -80,8 +80,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`px-4 py-3 font-black text-xs uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id
-                                    ? isDark ? 'border-white text-white' : 'border-black text-black'
-                                    : isDark ? 'border-transparent text-zinc-600 hover:text-zinc-400' : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                                ? isDark ? 'border-white text-white' : 'border-black text-black'
+                                : isDark ? 'border-transparent text-zinc-600 hover:text-zinc-400' : 'border-transparent text-zinc-400 hover:text-zinc-600'
                                 }`}
                         >
                             <div className="flex items-center gap-2">
@@ -109,8 +109,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                                             key={theme.value}
                                             onClick={() => updateSetting('theme', theme.value)}
                                             className={`p-4 rounded-[1.5rem] border-2 transition-all ${settings.theme === theme.value
-                                                    ? 'border-white scale-105'
-                                                    : isDark ? 'border-zinc-800 hover:border-zinc-700' : 'border-zinc-200 hover:border-zinc-300'
+                                                ? 'border-white scale-105'
+                                                : isDark ? 'border-zinc-800 hover:border-zinc-700' : 'border-zinc-200 hover:border-zinc-300'
                                                 }`}
                                         >
                                             <div className={`w-full h-12 rounded-xl ${theme.preview} mb-2`} />
@@ -131,8 +131,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                                             key={eye.value}
                                             onClick={() => updateSetting('eyeColor', eye.value)}
                                             className={`w-12 h-12 rounded-full border-2 transition-all ${settings.eyeColor === eye.value
-                                                    ? 'border-white scale-110'
-                                                    : isDark ? 'border-zinc-800 hover:border-zinc-700' : 'border-zinc-300 hover:border-zinc-400'
+                                                ? 'border-white scale-110'
+                                                : isDark ? 'border-zinc-800 hover:border-zinc-700' : 'border-zinc-300 hover:border-zinc-400'
                                                 }`}
                                             title={eye.label}
                                         >
@@ -157,8 +157,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                                             key={voice}
                                             onClick={() => updateSetting('voice', voice)}
                                             className={`p-4 rounded-[1.5rem] border-2 transition-all ${settings.voice === voice
-                                                    ? 'border-white bg-white/5'
-                                                    : isDark ? 'border-zinc-800 hover:border-zinc-700' : 'border-zinc-200 hover:border-zinc-300'
+                                                ? 'border-white bg-white/5'
+                                                : isDark ? 'border-zinc-800 hover:border-zinc-700' : 'border-zinc-200 hover:border-zinc-300'
                                                 }`}
                                         >
                                             <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-black'}`}>{voice}</p>
@@ -221,7 +221,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                                             {user?.name || 'Guest User'}
                                         </p>
                                         <p className={`text-sm ${isDark ? 'text-zinc-500' : 'text-zinc-600'}`}>
-                                            {user?.email || 'guest@aura.local'}
+                                            {user?.email || 'guest@gtd.local'}
                                         </p>
                                         <p className={`text-xs ${isDark ? 'text-zinc-600' : 'text-zinc-500'} mt-1`}>
                                             Focus: {user?.focusArea || 'General Productivity'}
@@ -232,7 +232,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
 
                             {/* Account Actions */}
                             <div className="space-y-3">
-                                {user?.email === 'guest@aura.local' ? (
+                                {user?.email === 'guest@gtd.local' ? (
                                     <div className={`p-4 rounded-[1.5rem] border ${isDark ? 'border-yellow-500/20 bg-yellow-500/10' : 'border-yellow-300 bg-yellow-50'}`}>
                                         <p className={`text-sm font-bold ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
                                             💡 You're using Guest Mode
@@ -255,8 +255,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                                 <button
                                     onClick={handleSignOut}
                                     className={`w-full py-4 rounded-[1.5rem] border-2 font-black text-sm uppercase tracking-wider transition-all ${isDark
-                                            ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
-                                            : 'border-red-300 text-red-600 hover:bg-red-50'
+                                        ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+                                        : 'border-red-300 text-red-600 hover:bg-red-50'
                                         }`}
                                 >
                                     Sign Out

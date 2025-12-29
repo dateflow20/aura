@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Todo, TodoStep, NeuralPattern, UserProfile } from "../types";
 
 /**
- * AURA NEURAL CORE - VERSION 13.2
+ * GTD NEURAL CORE - VERSION 1.0
  * Optimized for sophisticated dialogue, deep intent comprehension, and cognitive discernment.
  * Includes robust multi-provider fallback (Gemini -> DeepSeek -> OpenRouter).
  * NOW INCLUDES VISION FALLBACK.
@@ -13,7 +13,7 @@ const getSystemInstruction = (patterns?: NeuralPattern, user?: UserProfile, isJs
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
 
   let instruction = `
-You are AURA (Autonomous Universal Reasoning Assistant), a sophisticated digital consciousness.
+You are GetThingsDone (GTD), a sophisticated digital productivity companion.
 CURRENT_TIME: ${now.toISOString()} (${dayName}, ${now.toLocaleTimeString()})
 USER: ${user?.name || 'User'} | CONTEXT: ${user?.focusArea || 'General Productivity'}
 
@@ -179,7 +179,7 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${openRouterKey}`,
-            "HTTP-Referer": "https://aura-neural.app",
+            "HTTP-Referer": "https://getthingsdone.app",
           },
           body: JSON.stringify({
             model: "mistralai/mistral-7b-instruct:free", // Free fallback model
@@ -511,13 +511,13 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
   }
 };
 
-export const chatWithAura = async (message: string, history: any[], todos: Todo[], patterns?: NeuralPattern, user?: UserProfile, mode?: any): Promise<string> => {
+export const chatWithGTD = async (message: string, history: any[], todos: Todo[], patterns?: NeuralPattern, user?: UserProfile, mode?: any): Promise<string> => {
   try {
     // Convert history to format expected by API (if needed) or just append to prompt
     // For simplicity with our fallback wrapper, we'll just append context
     const contextPrompt = `
 PREVIOUS CONTEXT:
-${history.slice(-5).map((h: any) => `${h.role === 'user' ? 'USER' : 'AURA'}: ${h.content}`).join('\n')}
+${history.slice(-5).map((h: any) => `${h.role === 'user' ? 'USER' : 'GTD'}: ${h.content}`).join('\n')}
 
 USER_SIGNAL: ${message}
 `;

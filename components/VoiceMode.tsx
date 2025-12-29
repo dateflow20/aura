@@ -171,7 +171,7 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onClose, todos, settings, onTasks
               }
               if (msg.serverContent?.interrupted) stopAllAudio();
             },
-            onerror: (e) => console.error("AURA Sync Fail:", e),
+            onerror: (e) => console.error("GTD Sync Fail:", e),
             onclose: () => setIsActive(false)
           },
           config: {
@@ -188,7 +188,7 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onClose, todos, settings, onTasks
               }]
             }],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: settings.voice } } },
-            systemInstruction: `You are AURA, an exceptionally intelligent, charismatic digital companion.
+            systemInstruction: `You are GTD, an exceptionally intelligent, charismatic digital companion.
 
 CONVERSATIONAL DISCERNMENT PROTOCOL:
 - You are a sophisticated dialogue partner. Not every spoken word is an instruction.

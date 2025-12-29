@@ -25,7 +25,7 @@ const DownloadPage: React.FC<{ onUseWeb: () => void }> = ({ onUseWeb }) => {
                     </div>
 
                     <h1 className="text-6xl font-black uppercase tracking-tighter">
-                        Download AURA
+                        Download GTD
                     </h1>
                     <p className="text-xl text-zinc-500 max-w-2xl mx-auto">
                         Neural AI Companion • Voice-First Productivity • Adaptive Learning
@@ -45,8 +45,8 @@ const DownloadPage: React.FC<{ onUseWeb: () => void }> = ({ onUseWeb }) => {
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* iOS Card */}
                     <div className={`p-8 rounded-[2.5rem] border-2 transition-all ${platform === 'ios'
-                            ? 'border-white bg-white/5 scale-105'
-                            : 'border-zinc-800 hover:border-zinc-700'
+                        ? 'border-white bg-white/5 scale-105'
+                        : 'border-zinc-800 hover:border-zinc-700'
                         }`}>
                         <div className="text-center space-y-6">
                             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto">
@@ -90,8 +90,8 @@ const DownloadPage: React.FC<{ onUseWeb: () => void }> = ({ onUseWeb }) => {
 
                     {/* Android Card */}
                     <div className={`p-8 rounded-[2.5rem] border-2 transition-all ${platform === 'android'
-                            ? 'border-white bg-white/5 scale-105'
-                            : 'border-zinc-800 hover:border-zinc-700'
+                        ? 'border-white bg-white/5 scale-105'
+                        : 'border-zinc-800 hover:border-zinc-700'
                         }`}>
                         <div className="text-center space-y-6">
                             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
@@ -150,7 +150,7 @@ const DownloadPage: React.FC<{ onUseWeb: () => void }> = ({ onUseWeb }) => {
                 {/* Footer */}
                 <div className="text-center text-xs text-zinc-600 space-y-2">
                     <p>Version 1.0.0 • 25MB • Requires iOS 14+ or Android 8+</p>
-                    <p>© 2025 AURA Neural System • All rights reserved</p>
+                    <p>© 2025 GetThingsDone • All rights reserved</p>
                 </div>
             </div>
         </div>
