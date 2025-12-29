@@ -354,7 +354,7 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${openRouterKey}`,
-          "HTTP-Referer": "https://aura-neural.app",
+          "HTTP-Referer": "https://getthingsdone.app",
         },
         body: JSON.stringify({
           model: "google/gemini-flash-1.5", // Use Gemini via OpenRouter
@@ -472,7 +472,7 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${openRouterKey}`,
-          "HTTP-Referer": "https://aura-neural.app",
+          "HTTP-Referer": "https://getthingsdone.app",
         },
         body: JSON.stringify({
           model: "meta-llama/llama-3.2-11b-vision-instruct:free", // Free fallback for vision

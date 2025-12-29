@@ -25,7 +25,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         setIsShowing(true);
         await new Promise(r => timeout = window.setTimeout(r, 4000));
         setIsShowing(false);
-        await new Promise(r => timeout = window.setTimeout(r, 1200)); 
+        await new Promise(r => timeout = window.setTimeout(r, 1200));
         setActiveSnippet(prev => (prev + 1) % FEATURE_SNIPPETS.length);
       }
     };
@@ -36,26 +36,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden flex flex-col items-center justify-center font-['Inter']">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(25,25,25,1)_0%,rgba(0,0,0,1)_100%)]" />
-      
+
       {/* Lateral Neural Fragments (Depth Layer) */}
       <div className="absolute inset-0 pointer-events-none">
         {FEATURE_SNIPPETS.map((snippet, i) => (
-          <div 
+          <div
             key={snippet.id}
-            className={`absolute p-6 sm:p-10 border rounded-[2rem] sm:rounded-[3rem] backdrop-blur-3xl transition-all duration-[1500ms] ease-out shadow-2xl ${
-              snippet.side === 'left' ? 'left-4 sm:left-32' : 'right-4 sm:right-32'
-            } ${snippet.color} ${activeSnippet === i && isShowing ? 'opacity-60 translate-x-0 scale-100' : 'opacity-0 scale-95 ' + (snippet.side === 'left' ? '-translate-x-20' : 'translate-x-20')}`}
-            style={{ 
-              top: snippet.top, 
+            className={`absolute p-6 sm:p-10 border rounded-[2rem] sm:rounded-[3rem] backdrop-blur-3xl transition-all duration-[1500ms] ease-out shadow-2xl ${snippet.side === 'left' ? 'left-4 sm:left-32' : 'right-4 sm:right-32'
+              } ${snippet.color} ${activeSnippet === i && isShowing ? 'opacity-60 translate-x-0 scale-100' : 'opacity-0 scale-95 ' + (snippet.side === 'left' ? '-translate-x-20' : 'translate-x-20')}`}
+            style={{
+              top: snippet.top,
               width: 'calc(100% - 2rem)',
-              maxWidth: '280px' 
+              maxWidth: '280px'
             }}
           >
             <div className="w-12 h-[2px] bg-current opacity-30 mb-4 rounded-full" />
             <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.6em] mb-1 block opacity-80">{snippet.title}</span>
             <p className="text-sm sm:text-base font-bold text-white/80 leading-tight italic">"{snippet.detail}"</p>
             <div className="absolute top-0 right-0 p-4 opacity-5">
-               <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+              <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" /></svg>
             </div>
           </div>
         ))}
@@ -64,9 +63,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <div className="relative z-10 flex flex-col items-center gap-16 sm:gap-24 text-center px-6">
         <div className="flex flex-col items-center">
           <div className="flex items-center gap-2 mb-6 sm:mb-10">
-            {['A', 'U', 'R', 'A'].map((char, i) => (
-              <span 
-                key={i} 
+            {['G', 'T', 'D'].map((char, i) => (
+              <span
+                key={i}
                 className="text-8xl sm:text-[11rem] font-black tracking-tighter uppercase leading-none inline-block animate-float-char"
                 style={{ animationDelay: `${i * 200}ms` }}
               >
@@ -79,7 +78,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </p>
         </div>
 
-        <button 
+        <button
           onClick={onStart}
           className="group relative px-10 sm:px-16 py-5 sm:py-7 bg-transparent border border-white/5 rounded-full font-black text-[9px] sm:text-[10px] uppercase tracking-[0.8em] overflow-hidden transition-all hover:border-white/30 hover:scale-105 active:scale-95 shadow-2xl"
         >

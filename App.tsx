@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Todo, ChatMessage, AppMode, AuraSettings, AppState, UserProfile, NeuralPattern, ChatSessionMode, VoiceNote } from './types';
+import { Todo, ChatMessage, AppMode, GTDSettings, AppState, UserProfile, NeuralPattern, ChatSessionMode, VoiceNote } from './types';
 import { extractTasks, chatWithGTD, extractTasksFromAudio } from './services/geminiService';
 import { scheduleTaskReminders, requestNotificationPermission } from './services/notificationService';
 import { saveVoiceNote, getAllVoiceNotes, deleteVoiceNote as dbDeleteVoiceNote } from './services/db';
@@ -44,7 +44,7 @@ const App: React.FC = () => {
   const [recordDuration, setRecordDuration] = useState(0);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
 
-  const [settings, setSettings] = useState<AuraSettings>({
+  const [settings, setSettings] = useState<GTDSettings>({
     language: 'en',
     languageLabel: 'English',
     voice: 'Kore',
@@ -78,11 +78,11 @@ const App: React.FC = () => {
       // Guest Mode: Skip authentication if enabled
       const guestMode = import.meta.env.VITE_GUEST_MODE === 'true';
 
-      const savedUser = localStorage.getItem('aura_user');
-      const savedTodos = localStorage.getItem('aura_todos');
-      const savedSettings = localStorage.getItem('aura_settings');
-      const savedChatHistory = localStorage.getItem('aura_chat_history');
-      const savedVoiceHistory = localStorage.getItem('aura_voice_history');
+      const savedUser = localStorage.getItem('gtd_user') || localStorage.getItem('aura_user');
+      const savedTodos = localStorage.getItem('gtd_todos') || localStorage.getItem('aura_todos');
+      const savedSettings = localStorage.getItem('gtd_settings') || localStorage.getItem('aura_settings');
+      const savedChatHistory = localStorage.getItem('gtd_chat_history') || localStorage.getItem('aura_chat_history');
+      const savedVoiceHistory = localStorage.getItem('gtd_voice_history') || localStorage.getItem('aura_voice_history');
 
       if (savedUser) {
         const u = JSON.parse(savedUser);
@@ -92,13 +92,13 @@ const App: React.FC = () => {
         // Auto-create guest user
         const guestUser: UserProfile = {
           name: 'Guest User',
-          email: 'guest@aura.local',
+          email: 'guest@gtd.local',
           focusArea: 'Testing & Exploration',
           onboarded: true
         };
         setUser(guestUser);
         setAppState(AppState.Main);
-        localStorage.setItem('aura_user', JSON.stringify(guestUser));
+        localStorage.setItem('gtd_user', JSON.stringify(guestUser));
       }
 
       if (savedTodos) {
@@ -144,14 +144,14 @@ const App: React.FC = () => {
 
           const mergedTodos = Array.from(todoMap.values()).map((t: any) => ({ ...t, goal: t.goal || t.task }));
           setTodos(mergedTodos);
-          localStorage.setItem('aura_todos', JSON.stringify(mergedTodos));
+          localStorage.setItem('gtd_todos', JSON.stringify(mergedTodos));
         }
 
         const u = JSON.parse(savedUser);
         const cloudSettings = await syncSettingsFromCloud(u.id);
         if (cloudSettings) {
           setSettings(cloudSettings);
-          localStorage.setItem('aura_settings', JSON.stringify(cloudSettings));
+          localStorage.setItem('gtd_settings', JSON.stringify(cloudSettings));
         }
       }
 
@@ -174,14 +174,14 @@ const App: React.FC = () => {
     // Only save after initial data load to prevent overwriting with empty state
     if (!isLoaded) return;
 
-    localStorage.setItem('aura_todos', JSON.stringify(todos));
-    localStorage.setItem('aura_settings', JSON.stringify(settings));
-    localStorage.setItem('aura_chat_history', JSON.stringify(chatHistory));
-    localStorage.setItem('aura_voice_history', JSON.stringify(voiceHistory));
-    if (user) localStorage.setItem('aura_user', JSON.stringify(user));
+    localStorage.setItem('gtd_todos', JSON.stringify(todos));
+    localStorage.setItem('gtd_settings', JSON.stringify(settings));
+    localStorage.setItem('gtd_chat_history', JSON.stringify(chatHistory));
+    localStorage.setItem('gtd_voice_history', JSON.stringify(voiceHistory));
+    if (user) localStorage.setItem('gtd_user', JSON.stringify(user));
 
     // Cloud sync (debounced to avoid excessive API calls)
-    if (user && user.email !== 'guest@aura.local') {
+    if (user && user.email !== 'guest@gtd.local') {
       debouncedSync(async () => {
         await syncTodosToCloud(todos);
         await syncSettingsToCloud(user.id || user.email, settings);
@@ -384,13 +384,13 @@ const App: React.FC = () => {
     onGuestMode={() => {
       const guestUser: UserProfile = {
         name: 'Guest User',
-        email: 'guest@aura.local',
+        email: 'guest@gtd.local',
         focusArea: 'Testing & Exploration',
         onboarded: true
       };
       setUser(guestUser);
       setAppState(AppState.Main);
-      localStorage.setItem('aura_user', JSON.stringify(guestUser));
+      localStorage.setItem('gtd_user', JSON.stringify(guestUser));
     }}
   />;
   if (appState === AppState.Onboarding) return <Onboarding onComplete={(p, s) => { setUser(prev => ({ ...prev!, ...p, onboarded: true })); setSettings(prev => ({ ...prev, ...s })); setAppState(AppState.Main); }} />;
@@ -595,6 +595,11 @@ const App: React.FC = () => {
           user={user}
           onSignOut={() => {
             // Clear all data
+            localStorage.removeItem('gtd_user');
+            localStorage.removeItem('gtd_todos');
+            localStorage.removeItem('gtd_settings');
+            localStorage.removeItem('gtd_chat_history');
+            localStorage.removeItem('gtd_voice_history');
             localStorage.removeItem('aura_user');
             localStorage.removeItem('aura_todos');
             localStorage.removeItem('aura_settings');

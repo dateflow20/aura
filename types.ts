@@ -41,15 +41,15 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export type AuraVoice = 'Kore' | 'Puck' | 'Charon' | 'Fenrir' | 'Zephyr';
-export type AuraTheme = 'venom' | 'neural-blue' | 'solar-gold' | 'pure-white' | 'deep-purple' | 'emerald-green' | 'crimson-red' | 'cosmic';
+export type GTDVoice = 'Kore' | 'Puck' | 'Charon' | 'Fenrir' | 'Zephyr';
+export type GTDTheme = 'venom' | 'neural-blue' | 'solar-gold' | 'pure-white' | 'deep-purple' | 'emerald-green' | 'crimson-red' | 'cosmic';
 export type EyeColor = 'blue' | 'gold' | 'white' | 'purple' | 'green' | 'red';
 
-export interface AuraSettings {
+export interface GTDSettings {
   language: string;
   languageLabel: string;
-  voice: AuraVoice;
-  theme: AuraTheme;
+  voice: GTDVoice;
+  theme: GTDTheme;
   eyeColor: EyeColor;
   reminderMinutes: number;
   learningEnabled: boolean;

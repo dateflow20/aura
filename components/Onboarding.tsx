@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import { UserProfile, AuraSettings, AuraTheme, EyeColor } from '../types';
+import { UserProfile, GTDSettings, GTDTheme, EyeColor } from '../types';
 
 interface OnboardingProps {
-  onComplete: (profile: Partial<UserProfile>, settings: Partial<AuraSettings>) => void;
+  onComplete: (profile: Partial<UserProfile>, settings: Partial<GTDSettings>) => void;
 }
 
-const THEMES: { id: AuraTheme; label: string; color: string }[] = [
+const THEMES: { id: GTDTheme; label: string; color: string }[] = [
   { id: 'venom', label: 'Venom', color: 'bg-zinc-900' },
   { id: 'neural-blue', label: 'Neural Blue', color: 'bg-blue-600' },
   { id: 'solar-gold', label: 'Solar Gold', color: 'bg-amber-600' },
@@ -19,7 +19,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [focusArea, setFocusArea] = useState('');
-  const [theme, setTheme] = useState<AuraTheme>('venom');
+  const [theme, setTheme] = useState<GTDTheme>('venom');
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);

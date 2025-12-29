@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'aura-v1';
+const CACHE_NAME = 'gtd-v1.3';
 const ASSETS = [
   '/',
   '/index.html',

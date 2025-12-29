@@ -45,7 +45,7 @@ const sendLocalNotification = (todo: Todo) => {
     // Refactored: changed 'todo.task' to 'todo.goal' to match updated Todo type
     new Notification(`GTD: Temporal Goal Due`, {
       body: todo.goal,
-      icon: "https://img.icons8.com/ios-filled/512/ffffff/brain.png",
+      icon: "/icon-192.png",
     });
   }
 };

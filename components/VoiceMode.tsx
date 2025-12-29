@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GoogleGenAI, Modality, LiveServerMessage, Type } from '@google/genai';
 import { createPcmBlob, decode, decodeAudioData } from '../services/audioUtils.ts';
-import { Todo, AuraSettings, AuraTheme, EyeColor, ChatMessage, AuraVoice } from '../types.ts';
+import { Todo, GTDSettings, GTDTheme, EyeColor, ChatMessage, GTDVoice } from '../types.ts';
 
 interface VoiceModeProps {
   onClose: () => void;
@@ -10,11 +10,11 @@ interface VoiceModeProps {
   onHistoryUpdate: (history: ChatMessage[]) => void;
   onTasksUpdated: (tasks: Todo[]) => void;
   onCalendarSynced: (msg: string) => void;
-  onSettingsUpdate: (settings: AuraSettings) => void;
-  settings: AuraSettings;
+  onSettingsUpdate: (settings: GTDSettings) => void;
+  settings: GTDSettings;
 }
 
-const THEME_CONFIG: Record<AuraTheme, { core: string; glow: string; backdrop: string; secondary: string }> = {
+const THEME_CONFIG: Record<GTDTheme, { core: string; glow: string; backdrop: string; secondary: string }> = {
   'venom': { core: 'bg-zinc-800', glow: 'rgba(255, 255, 255, 0.05)', backdrop: 'bg-black', secondary: 'bg-zinc-900' },
   'neural-blue': { core: 'bg-blue-600', glow: 'rgba(59, 130, 246, 0.15)', backdrop: 'bg-slate-950', secondary: 'bg-blue-900/20' },
   'solar-gold': { core: 'bg-amber-500', glow: 'rgba(251, 191, 36, 0.15)', backdrop: 'bg-zinc-950', secondary: 'bg-amber-900/20' },
@@ -26,7 +26,7 @@ const THEME_CONFIG: Record<AuraTheme, { core: string; glow: string; backdrop: st
 };
 
 const EYE_COLORS: EyeColor[] = ['white', 'blue', 'gold', 'purple', 'green', 'red'];
-const VOICES: AuraVoice[] = ['Kore', 'Puck', 'Charon', 'Fenrir', 'Zephyr'];
+const VOICES: GTDVoice[] = ['Kore', 'Puck', 'Charon', 'Fenrir', 'Zephyr'];
 
 const EYE_COLOR_CLASSES: Record<EyeColor, string> = {
   'blue': 'bg-blue-400 shadow-[0_0_60px_rgba(59,130,246,0.8)]',

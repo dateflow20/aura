@@ -1,5 +1,5 @@
 {
-  "name": "AURA Neural System",
+  "name": "GetThingsDone",
   "description": "A futuristic voice-first neural organizer that uses Gemini AI to orchestrate your existence through natural conversation.",
   "requestFramePermissions": [
     "microphone",

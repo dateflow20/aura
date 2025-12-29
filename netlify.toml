@@ -1,4 +1,4 @@
-# Netlify configuration for AURA Neural System
+# Netlify configuration for GetThingsDone (GTD)
 
 [build]
   command = "npm run build"

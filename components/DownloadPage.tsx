@@ -76,7 +76,7 @@ const DownloadPage: React.FC<{ onUseWeb: () => void }> = ({ onUseWeb }) => {
                             </div>
 
                             <button
-                                onClick={() => window.location.href = '/downloads/aura-ios.ipa'}
+                                onClick={() => window.location.href = '/downloads/gtd-ios.ipa'}
                                 className="w-full py-4 rounded-[1.5rem] bg-white text-black font-black text-sm uppercase tracking-wider hover:scale-[1.02] active:scale-95 transition-all"
                             >
                                 Download for iOS
@@ -121,7 +121,7 @@ const DownloadPage: React.FC<{ onUseWeb: () => void }> = ({ onUseWeb }) => {
                             </div>
 
                             <button
-                                onClick={() => window.location.href = '/downloads/aura-android.apk'}
+                                onClick={() => window.location.href = '/downloads/gtd-android.apk'}
                                 className="w-full py-4 rounded-[1.5rem] bg-white text-black font-black text-sm uppercase tracking-wider hover:scale-[1.02] active:scale-95 transition-all"
                             >
                                 Download APK

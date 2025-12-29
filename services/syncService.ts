@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { Todo, AuraSettings, UserProfile } from '../types';
+import { Todo, GTDSettings, UserProfile } from '../types';
 
 // Check if Supabase is properly configured
 const isSupabaseConfigured = () => {
@@ -133,7 +133,7 @@ export const syncTodosFromCloud = async (): Promise<Todo[] | null> => {
 
 // ============= SETTINGS SYNC =============
 
-export const syncSettingsToCloud = async (userId: string, settings: AuraSettings): Promise<boolean> => {
+export const syncSettingsToCloud = async (userId: string, settings: GTDSettings): Promise<boolean> => {
     try {
         if (isGuestMode()) return false;
         if (!isSupabaseConfigured()) return false;
@@ -165,7 +165,7 @@ export const syncSettingsToCloud = async (userId: string, settings: AuraSettings
     }
 };
 
-export const syncSettingsFromCloud = async (userId: string): Promise<AuraSettings | null> => {
+export const syncSettingsFromCloud = async (userId: string): Promise<GTDSettings | null> => {
     try {
         if (isGuestMode()) return null;
         if (!isSupabaseConfigured()) return null;
@@ -186,7 +186,7 @@ export const syncSettingsFromCloud = async (userId: string): Promise<AuraSetting
         }
         if (!data) return null;
 
-        const settings: AuraSettings = {
+        const settings: GTDSettings = {
             language: data.language,
             languageLabel: data.language_label,
             voice: data.voice,

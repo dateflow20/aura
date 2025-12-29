@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { AuraSettings, UserProfile, AuraTheme, AuraVoice, EyeColor } from '../types';
+import { GTDSettings, UserProfile, GTDTheme, GTDVoice, EyeColor } from '../types';
 
 interface SettingsPanelProps {
     onClose: () => void;
-    settings: AuraSettings;
-    onSettingsUpdate: (settings: AuraSettings) => void;
+    settings: GTDSettings;
+    onSettingsUpdate: (settings: GTDSettings) => void;
     user: UserProfile | null;
     onSignOut: () => void;
 }
 
-const THEMES: { value: AuraTheme; label: string; preview: string }[] = [
+const THEMES: { value: GTDTheme; label: string; preview: string }[] = [
     { value: 'venom', label: 'Venom', preview: 'bg-zinc-800 border-zinc-700' },
     { value: 'neural-blue', label: 'Neural Blue', preview: 'bg-blue-600 border-blue-500' },
     { value: 'solar-gold', label: 'Solar Gold', preview: 'bg-amber-500 border-amber-400' },
@@ -20,7 +20,7 @@ const THEMES: { value: AuraTheme; label: string; preview: string }[] = [
     { value: 'cosmic', label: 'Cosmic', preview: 'bg-indigo-600 border-indigo-500' },
 ];
 
-const VOICES: AuraVoice[] = ['Kore', 'Puck', 'Charon', 'Fenrir', 'Zephyr'];
+const VOICES: GTDVoice[] = ['Kore', 'Puck', 'Charon', 'Fenrir', 'Zephyr'];
 const EYE_COLORS: { value: EyeColor; label: string; color: string }[] = [
     { value: 'white', label: 'White', color: 'bg-white' },
     { value: 'blue', label: 'Blue', color: 'bg-blue-400' },
@@ -33,7 +33,7 @@ const EYE_COLORS: { value: EyeColor; label: string; color: string }[] = [
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSettingsUpdate, user, onSignOut }) => {
     const [activeTab, setActiveTab] = useState<'appearance' | 'voice' | 'account'>('appearance');
 
-    const updateSetting = <K extends keyof AuraSettings>(key: K, value: AuraSettings[K]) => {
+    const updateSetting = <K extends keyof GTDSettings>(key: K, value: GTDSettings[K]) => {
         onSettingsUpdate({ ...settings, [key]: value });
     };
 
