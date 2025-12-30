@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { extractTasks, extractTasksFromAudio } from '../services/geminiService';
 import { Todo, UserProfile, NeuralPattern } from '../types';
 
@@ -17,9 +17,137 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
     const [generatedGoals, setGeneratedGoals] = useState<Todo[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [visionSubMode, setVisionSubMode] = useState<'upload' | 'camera'>('upload');
+    const [cameraActive, setCameraActive] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    // Live Voice State
+    const [liveTranscript, setLiveTranscript] = useState('');
+    const recognitionRef = useRef<any>(null);
+    const lastProcessedIndex = useRef(0);
+
     // Audio Refs
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+
+    // Camera Logic
+    const startCamera = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setCameraActive(true);
+            }
+        } catch (err) {
+            console.error("Camera denied:", err);
+            alert("Camera access denied.");
+        }
+    }, []);
+
+    const stopCamera = useCallback(() => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+            videoRef.current.srcObject = null;
+            setCameraActive(false);
+        }
+    }, []);
+
+    const captureImage = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0);
+        const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        stopCamera();
+        processImage(base64, 'image/jpeg');
+    };
+
+    const processImage = async (base64: string, mimeType: string) => {
+        setStep('processing');
+        try {
+            const { extractTasksFromImage } = await import('../services/geminiService');
+            const tasks = await extractTasksFromImage(base64, mimeType, []);
+            const goals = tasks.map(t => ({ ...t, category: 'new-year' as const, isLocked: true, progress: 0 }));
+            setGeneratedGoals(goals);
+            setStep('review');
+        } catch (err) {
+            console.error(err);
+            setStep('input');
+            alert("Failed to analyze image.");
+        }
+    };
+
+    // Live Voice Logic
+    const startLiveVoice = () => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert("Speech recognition not supported in this browser.");
+            return;
+        }
+
+        // @ts-ignore
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript + ' ';
+                }
+            }
+            if (finalTranscript) {
+                setLiveTranscript(prev => {
+                    const newText = prev + finalTranscript;
+                    processLiveText(newText);
+                    return newText;
+                });
+            }
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsRecording(true);
+    };
+
+    const stopLiveVoice = () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
+    const processLiveText = async (fullText: string) => {
+        // Only process new chunks of text
+        const newText = fullText.slice(lastProcessedIndex.current);
+        if (newText.length < 10) return; // Wait for enough text
+
+        lastProcessedIndex.current = fullText.length;
+
+        try {
+            const newGoals = await extractTasks(newText, [], patterns, user || undefined, 'new-year');
+            if (newGoals.length > 0) {
+                setGeneratedGoals(prev => [...prev, ...newGoals]);
+            }
+        } catch (e) {
+            console.error("Live processing error:", e);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            stopCamera();
+            stopLiveVoice();
+        };
+    }, [stopCamera]);
 
     const startRecording = async () => {
         try {
@@ -156,16 +284,36 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                         </div>
 
                         {mode === 'voice' && (
-                            <button
-                                onClick={isRecording ? stopRecording : startRecording}
-                                className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${isRecording ? 'bg-red-500 scale-110 shadow-[0_0_50px_rgba(239,68,68,0.5)]' : 'bg-zinc-900 border-2 border-zinc-800 hover:border-amber-500/50'}`}
-                            >
-                                {isRecording ? (
-                                    <div className="w-12 h-12 bg-white rounded-sm animate-pulse" />
-                                ) : (
-                                    <svg className="w-16 h-16 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                            <div className="flex flex-col items-center gap-6 w-full">
+                                <button
+                                    onClick={isRecording ? stopLiveVoice : startLiveVoice}
+                                    className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${isRecording ? 'bg-red-500 scale-110 shadow-[0_0_50px_rgba(239,68,68,0.5)]' : 'bg-zinc-900 border-2 border-zinc-800 hover:border-amber-500/50'}`}
+                                >
+                                    {isRecording ? (
+                                        <div className="w-12 h-12 bg-white rounded-sm animate-pulse" />
+                                    ) : (
+                                        <svg className="w-16 h-16 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                    )}
+                                </button>
+
+                                {generatedGoals.length > 0 && (
+                                    <div className="w-full max-w-md space-y-2 animate-in slide-in-from-bottom-4">
+                                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest text-center mb-2">Detected Goals (Live)</p>
+                                        {generatedGoals.map((goal, i) => (
+                                            <div key={goal.id} className="bg-zinc-900/80 border border-zinc-800 p-4 rounded-xl flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                                <span className="text-sm text-white font-medium">{goal.goal}</span>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setStep('review')}
+                                            className="w-full py-3 bg-amber-500 text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-400 transition-colors mt-4"
+                                        >
+                                            Review & Commit ({generatedGoals.length})
+                                        </button>
+                                    </div>
                                 )}
-                            </button>
+                            </div>
                         )}
 
                         {mode === 'text' && (
@@ -182,88 +330,60 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                                     className="w-full mt-4 py-4 bg-white text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-500 transition-colors disabled:opacity-50"
                                 >
                                     Analyze
-                                </button>
-                            </div>
-                        )}
-
-                        {mode === 'scan' && (
-                            <div className="w-full flex flex-col items-center">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    ref={fileInputRef}
-                                    onChange={handleFileSelect}
-                                    className="hidden"
-                                />
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="w-40 h-40 rounded-[2rem] bg-zinc-900 border-2 border-dashed border-zinc-700 flex flex-col items-center justify-center gap-4 hover:border-amber-500/50 hover:bg-zinc-900/50 transition-all group"
-                                >
-                                    <svg className="w-12 h-12 text-zinc-600 group-hover:text-amber-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300">Upload Board</span>
-                                </button>
-                                <p className="mt-6 text-zinc-500 text-xs font-medium text-center max-w-xs">
-                                    Upload your Vision Board or Bingo Card. The neural engine will extract your goals.
+                                    {mode === 'text' && "Write down your aspirations"}
                                 </p>
                             </div>
                         )}
 
-                        <p className="text-zinc-500 text-xs font-medium text-center max-w-xs">
-                            {mode === 'voice' && (isRecording ? "Listening to your intent..." : "Tap to speak your goals")}
-                            {mode === 'text' && "Write down your aspirations"}
-                        </p>
-                    </div>
-                )}
+                        {step === 'processing' && (
+                            <div className="flex flex-col items-center gap-6 z-10">
+                                <div className="w-20 h-20 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+                                <p className="text-amber-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Architecting 2026...</p>
+                            </div>
+                        )}
 
-                {step === 'processing' && (
-                    <div className="flex flex-col items-center gap-6 z-10">
-                        <div className="w-20 h-20 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
-                        <p className="text-amber-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Architecting 2026...</p>
-                    </div>
-                )}
-
-                {step === 'review' && (
-                    <div className="w-full max-w-2xl z-10 h-full flex flex-col">
-                        <h3 className="text-center text-zinc-400 text-xs font-black uppercase tracking-widest mb-6">Generated Registry</h3>
-                        <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide">
-                            {generatedGoals.map((goal, i) => (
-                                <div key={i} className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex gap-4">
-                                    <div className="mt-1 w-6 h-6 rounded-full border-2 border-amber-500/30 flex items-center justify-center text-[10px] font-black text-amber-500">
-                                        {i + 1}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-white text-lg">{goal.goal}</h4>
-                                        <div className="mt-3 space-y-2">
-                                            {goal.steps?.map((step, j) => (
-                                                <div key={j} className="flex items-center gap-2 text-zinc-400 text-sm">
-                                                    <div className="w-1 h-1 bg-zinc-600 rounded-full" />
-                                                    {step.text}
+                        {step === 'review' && (
+                            <div className="w-full max-w-2xl z-10 h-full flex flex-col">
+                                <h3 className="text-center text-zinc-400 text-xs font-black uppercase tracking-widest mb-6">Generated Registry</h3>
+                                <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide">
+                                    {generatedGoals.map((goal, i) => (
+                                        <div key={i} className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex gap-4">
+                                            <div className="mt-1 w-6 h-6 rounded-full border-2 border-amber-500/30 flex items-center justify-center text-[10px] font-black text-amber-500">
+                                                {i + 1}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white text-lg">{goal.goal}</h4>
+                                                <div className="mt-3 space-y-2">
+                                                    {goal.steps?.map((step, j) => (
+                                                        <div key={j} className="flex items-center gap-2 text-zinc-400 text-sm">
+                                                            <div className="w-1 h-1 bg-zinc-600 rounded-full" />
+                                                            {step.text}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            </div>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                        <div className="mt-6 pt-6 border-t border-zinc-900 flex gap-4">
-                            <button
-                                onClick={() => setStep('input')}
-                                className="flex-1 py-4 bg-zinc-900 text-white rounded-xl font-black uppercase tracking-widest hover:bg-zinc-800 transition-colors"
-                            >
-                                Retry
-                            </button>
-                            <button
-                                onClick={() => onCommit(generatedGoals)}
-                                className="flex-[2] py-4 bg-amber-500 text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
-                            >
-                                Commit to 2026
-                            </button>
-                        </div>
+                                <div className="mt-6 pt-6 border-t border-zinc-900 flex gap-4">
+                                    <button
+                                        onClick={() => setStep('input')}
+                                        className="flex-1 py-4 bg-zinc-900 text-white rounded-xl font-black uppercase tracking-widest hover:bg-zinc-800 transition-colors"
+                                    >
+                                        Retry
+                                    </button>
+                                    <button
+                                        onClick={() => onCommit(generatedGoals)}
+                                        className="flex-[2] py-4 bg-amber-500 text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
+                                    >
+                                        Commit to 2026
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
         </div>
-    );
+            );
 };
 
-export default NewYearWizard;
+            export default NewYearWizard;
