@@ -27,7 +27,7 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
     const recognitionRef = useRef<any>(null);
     const lastProcessedIndex = useRef(0);
 
-    // Audio Refs
+    // Audio Refs (for legacy fallback if needed)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
 
@@ -73,7 +73,14 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
         try {
             const { extractTasksFromImage } = await import('../services/geminiService');
             const tasks = await extractTasksFromImage(base64, mimeType, []);
-            const goals = tasks.map(t => ({ ...t, category: 'new-year' as const, isLocked: true, progress: 0 }));
+            const goals = tasks.map(t => ({
+                ...t,
+                id: Math.random().toString(36).substr(2, 9),
+                category: 'new-year' as const,
+                isLocked: true,
+                progress: 0,
+                createdAt: new Date().toISOString()
+            }));
             setGeneratedGoals(goals);
             setStep('review');
         } catch (err) {
@@ -126,16 +133,24 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
     };
 
     const processLiveText = async (fullText: string) => {
-        // Only process new chunks of text
         const newText = fullText.slice(lastProcessedIndex.current);
-        if (newText.length < 10) return; // Wait for enough text
+        if (newText.length < 15) return;
 
         lastProcessedIndex.current = fullText.length;
 
         try {
-            const newGoals = await extractTasks(newText, [], patterns, user || undefined, 'new-year');
+            const newGoals = await extractTasks(newText, [], patterns || { frequentLabels: [], preferredLanguage: 'English', lastActionType: 'Inception', averageTaskComplexity: 1 }, user || undefined, 'new-year');
             if (newGoals.length > 0) {
-                setGeneratedGoals(prev => [...prev, ...newGoals]);
+                setGeneratedGoals(prev => [
+                    ...prev,
+                    ...newGoals.map(g => ({
+                        ...g,
+                        id: Math.random().toString(36).substr(2, 9),
+                        isLocked: true,
+                        progress: 0,
+                        createdAt: new Date().toISOString()
+                    }))
+                ]);
             }
         } catch (e) {
             console.error("Live processing error:", e);
@@ -149,64 +164,18 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
         };
     }, [stopCamera]);
 
-    const startRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
-            mediaRecorderRef.current = mediaRecorder;
-            audioChunksRef.current = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) audioChunksRef.current.push(event.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = async () => {
-                    const base64 = (reader.result as string).split(',')[1];
-                    processAudio(base64);
-                };
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            mediaRecorder.start();
-            setIsRecording(true);
-        } catch (err) {
-            console.error("Mic error:", err);
-            alert("Microphone access denied.");
-        }
-    };
-
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            setStep('processing');
-        }
-    };
-
-    const processAudio = async (base64: string) => {
-        try {
-            const result = await extractTasksFromAudio(base64, 'audio/webm', [], patterns, user || undefined);
-            // Force category to new-year
-            const goals = result.tasks.map(t => ({ ...t, category: 'new-year' as const, isLocked: true, progress: 0 }));
-            setGeneratedGoals(goals);
-            setStep('review');
-        } catch (e) {
-            console.error(e);
-            setStep('input');
-            alert("Failed to process audio.");
-        }
-    };
-
     const processText = async () => {
         if (!textInput.trim()) return;
         setStep('processing');
         try {
-            const goals = await extractTasks(textInput, [], patterns, user || undefined, 'new-year');
-            setGeneratedGoals(goals);
+            const goals = await extractTasks(textInput, [], patterns || { frequentLabels: [], preferredLanguage: 'English', lastActionType: 'Inception', averageTaskComplexity: 1 }, user || undefined, 'new-year');
+            setGeneratedGoals(goals.map(g => ({
+                ...g,
+                id: Math.random().toString(36).substr(2, 9),
+                isLocked: true,
+                progress: 0,
+                createdAt: new Date().toISOString()
+            })));
             setStep('review');
         } catch (e) {
             console.error(e);
@@ -223,24 +192,7 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
         const reader = new FileReader();
         reader.onloadend = async () => {
             const base64 = (reader.result as string).split(',')[1];
-            try {
-                // We need to import extractTasksFromImage first. 
-                // Since it wasn't imported in the original file, I will add the import in a separate chunk or assume it's available.
-                // Actually, let's use the existing import line if possible, or just call it if it was imported.
-                // Wait, I need to check imports. It was NOT imported. I need to update imports too.
-
-                // For now, let's assume I will update imports in another chunk.
-                const { extractTasksFromImage } = await import('../services/geminiService');
-                const tasks = await extractTasksFromImage(base64, file.type, []);
-
-                const goals = tasks.map(t => ({ ...t, category: 'new-year' as const, isLocked: true, progress: 0 }));
-                setGeneratedGoals(goals);
-                setStep('review');
-            } catch (err) {
-                console.error(err);
-                setStep('input');
-                alert("Failed to analyze vision board.");
-            }
+            processImage(base64, file.type);
         };
         reader.readAsDataURL(file);
     };
@@ -248,7 +200,7 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
     return (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-500">
             {/* Header */}
-            <div className="p-6 flex items-center justify-between border-b border-zinc-900">
+            <div className="p-6 flex items-center justify-between border-b border-zinc-900 bg-black/50 backdrop-blur-xl">
                 <h2 className="text-xl font-black uppercase tracking-tighter text-amber-500">2026 Vision Architect</h2>
                 <button onClick={onClose} className="p-2 hover:bg-zinc-900 rounded-full transition-colors">
                     <svg className="w-6 h-6 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -263,24 +215,18 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                 {step === 'input' && (
                     <div className="w-full max-w-lg z-10 flex flex-col items-center gap-8">
                         <div className="flex gap-4 mb-8">
-                            <button
-                                onClick={() => setMode('voice')}
-                                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'voice' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}
-                            >
-                                Voice
-                            </button>
-                            <button
-                                onClick={() => setMode('text')}
-                                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'text' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}
-                            >
-                                Text
-                            </button>
-                            <button
-                                onClick={() => setMode('scan')}
-                                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'scan' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}
-                            >
-                                Vision
-                            </button>
+                            {['voice', 'text', 'scan'].map((m) => (
+                                <button
+                                    key={m}
+                                    onClick={() => {
+                                        setMode(m as any);
+                                        if (m !== 'scan') stopCamera();
+                                    }}
+                                    className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === m ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
                         </div>
 
                         {mode === 'voice' && (
@@ -299,12 +245,22 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                                 {generatedGoals.length > 0 && (
                                     <div className="w-full max-w-md space-y-2 animate-in slide-in-from-bottom-4">
                                         <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest text-center mb-2">Detected Goals (Live)</p>
-                                        {generatedGoals.map((goal, i) => (
-                                            <div key={goal.id} className="bg-zinc-900/80 border border-zinc-800 p-4 rounded-xl flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                                                <span className="text-sm text-white font-medium">{goal.goal}</span>
-                                            </div>
-                                        ))}
+                                        <div className="max-h-[30vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                            {generatedGoals.map((goal) => (
+                                                <div key={goal.id} className="bg-zinc-900/80 border border-zinc-800 p-4 rounded-xl flex items-center justify-between gap-3 group">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                                        <span className="text-sm text-white font-medium">{goal.goal}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setGeneratedGoals(prev => prev.filter(g => g.id !== goal.id))}
+                                                        className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-600 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
                                         <button
                                             onClick={() => setStep('review')}
                                             className="w-full py-3 bg-amber-500 text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-400 transition-colors mt-4"
@@ -330,60 +286,143 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                                     className="w-full mt-4 py-4 bg-white text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-500 transition-colors disabled:opacity-50"
                                 >
                                     Analyze
-                                    {mode === 'text' && "Write down your aspirations"}
+                                </button>
+                            </div>
+                        )}
+
+                        {mode === 'scan' && (
+                            <div className="w-full flex flex-col items-center gap-6">
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => { setVisionSubMode('upload'); stopCamera(); }}
+                                        className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${visionSubMode === 'upload' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}
+                                    >
+                                        Upload
+                                    </button>
+                                    <button
+                                        onClick={() => { setVisionSubMode('camera'); startCamera(); }}
+                                        className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${visionSubMode === 'camera' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}
+                                    >
+                                        Camera
+                                    </button>
+                                </div>
+
+                                {visionSubMode === 'upload' ? (
+                                    <>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            ref={fileInputRef}
+                                            onChange={handleFileSelect}
+                                            className="hidden"
+                                        />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-40 h-40 rounded-[2rem] bg-zinc-900 border-2 border-dashed border-zinc-700 flex flex-col items-center justify-center gap-4 hover:border-amber-500/50 hover:bg-zinc-900/50 transition-all group"
+                                        >
+                                            <svg className="w-12 h-12 text-zinc-600 group-hover:text-amber-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300">Upload Board</span>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div className="relative w-full max-w-sm aspect-[3/4] bg-black rounded-3xl overflow-hidden border-2 border-zinc-800 shadow-2xl group">
+                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                                        <canvas ref={canvasRef} className="hidden" />
+
+                                        {/* Neural Overlays */}
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            {/* Corner Brackets */}
+                                            <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-amber-500/50" />
+                                            <div className="absolute top-6 right-6 w-8 h-8 border-t-2 border-r-2 border-amber-500/50" />
+                                            <div className="absolute bottom-6 left-6 w-8 h-8 border-b-2 border-l-2 border-amber-500/50" />
+                                            <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-amber-500/50" />
+
+                                            {/* Scanning Line */}
+                                            <div className="absolute inset-x-6 top-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-scan-line" />
+
+                                            {/* Tech Text */}
+                                            <div className="absolute top-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full border border-white/10">
+                                                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-amber-500/80">Neural Vision Active</p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={captureImage}
+                                            className="absolute bottom-8 left-1/2 -translate-x-1/2 w-20 h-20 bg-white rounded-full border-8 border-zinc-300 shadow-2xl active:scale-90 transition-all flex items-center justify-center z-20"
+                                        >
+                                            <div className="w-12 h-12 rounded-full border-2 border-zinc-200" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                <p className="text-zinc-500 text-xs font-medium text-center max-w-xs">
+                                    {visionSubMode === 'upload' ? "Upload your Vision Board or Bingo Card." : "Point camera at your board to scan."}
                                 </p>
                             </div>
                         )}
 
-                        {step === 'processing' && (
-                            <div className="flex flex-col items-center gap-6 z-10">
-                                <div className="w-20 h-20 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
-                                <p className="text-amber-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Architecting 2026...</p>
-                            </div>
-                        )}
-
-                        {step === 'review' && (
-                            <div className="w-full max-w-2xl z-10 h-full flex flex-col">
-                                <h3 className="text-center text-zinc-400 text-xs font-black uppercase tracking-widest mb-6">Generated Registry</h3>
-                                <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide">
-                                    {generatedGoals.map((goal, i) => (
-                                        <div key={i} className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex gap-4">
-                                            <div className="mt-1 w-6 h-6 rounded-full border-2 border-amber-500/30 flex items-center justify-center text-[10px] font-black text-amber-500">
-                                                {i + 1}
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-white text-lg">{goal.goal}</h4>
-                                                <div className="mt-3 space-y-2">
-                                                    {goal.steps?.map((step, j) => (
-                                                        <div key={j} className="flex items-center gap-2 text-zinc-400 text-sm">
-                                                            <div className="w-1 h-1 bg-zinc-600 rounded-full" />
-                                                            {step.text}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="mt-6 pt-6 border-t border-zinc-900 flex gap-4">
-                                    <button
-                                        onClick={() => setStep('input')}
-                                        className="flex-1 py-4 bg-zinc-900 text-white rounded-xl font-black uppercase tracking-widest hover:bg-zinc-800 transition-colors"
-                                    >
-                                        Retry
-                                    </button>
-                                    <button
-                                        onClick={() => onCommit(generatedGoals)}
-                                        className="flex-[2] py-4 bg-amber-500 text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
-                                    >
-                                        Commit to 2026
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        <p className="text-zinc-500 text-xs font-medium text-center max-w-xs">
+                            {mode === 'voice' && (isRecording ? "Listening to your intent..." : "Tap to speak your goals")}
+                            {mode === 'text' && "Write down your aspirations"}
+                        </p>
                     </div>
+                )}
+
+                {step === 'processing' && (
+                    <div className="flex flex-col items-center gap-6 z-10">
+                        <div className="w-20 h-20 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+                        <p className="text-amber-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Architecting 2026...</p>
+                    </div>
+                )}
+
+                {step === 'review' && (
+                    <div className="w-full max-w-2xl z-10 h-full flex flex-col">
+                        <h3 className="text-center text-zinc-400 text-xs font-black uppercase tracking-widest mb-6">Generated Registry</h3>
+                        <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide">
+                            {generatedGoals.map((goal, i) => (
+                                <div key={goal.id || i} className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex gap-4 group relative">
+                                    <div className="mt-1 w-6 h-6 rounded-full border-2 border-amber-500/30 flex items-center justify-center text-[10px] font-black text-amber-500">
+                                        {i + 1}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-white text-lg">{goal.goal}</h4>
+                                        <div className="mt-3 space-y-2">
+                                            {goal.steps?.map((s, j) => (
+                                                <div key={j} className="flex items-center gap-2 text-zinc-400 text-sm">
+                                                    <div className="w-1 h-1 bg-zinc-600 rounded-full" />
+                                                    {s.text}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setGeneratedGoals(prev => prev.filter((_, idx) => idx !== i))}
+                                        className="absolute top-4 right-4 p-2 hover:bg-red-500/20 rounded-lg text-zinc-600 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-6 pt-6 border-t border-zinc-900 flex gap-4">
+                            <button
+                                onClick={() => setStep('input')}
+                                className="flex-1 py-4 bg-zinc-900 text-white rounded-xl font-black uppercase tracking-widest hover:bg-zinc-800 transition-colors"
+                            >
+                                Add More
+                            </button>
+                            <button
+                                onClick={() => onCommit(generatedGoals)}
+                                className="flex-[2] py-4 bg-amber-500 text-black rounded-xl font-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
+                            >
+                                Commit to 2026
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-            );
+    );
 };
 
-            export default NewYearWizard;
+export default NewYearWizard;

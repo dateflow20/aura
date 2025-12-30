@@ -22,8 +22,13 @@ html {
 
 /* Custom Animations */
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slide-in-from-bottom {
@@ -31,6 +36,7 @@ html {
     opacity: 0;
     transform: translateY(1rem);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -42,6 +48,7 @@ html {
     opacity: 0;
     transform: translateY(-1rem);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -85,4 +92,18 @@ html {
 
 .duration-700 {
   animation-duration: 700ms;
+}
+
+@keyframes scan-line {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(calc(100% * 4/3));
+  }
+}
+
+.animate-scan-line {
+  animation: scan-line 3s linear infinite;
 }
