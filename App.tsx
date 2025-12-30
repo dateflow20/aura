@@ -224,6 +224,39 @@ const App: React.FC = () => {
     });
   };
 
+  const reprocessVoiceNote = async (note: VoiceNote) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    showSyncMessage("Reprocessing Signal...");
+
+    try {
+      const result = await extractTasksFromAudio(note.audioBase64, note.mimeType, todos, patterns, user || undefined);
+
+      // Update note with new transcription
+      const updatedNote = { ...note, transcription: result.transcription };
+      await saveVoiceNote(updatedNote);
+      setVoiceNotes(prev => ({ ...prev, [note.id]: updatedNote }));
+
+      // Merge new tasks
+      if (result.tasks.length > 0) {
+        const newTasksWithId = result.tasks.map(t => ({ ...t, voiceNoteId: note.id }));
+        setTodos(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueNewTasks = newTasksWithId.filter(t => !existingIds.has(t.id));
+          return [...uniqueNewTasks, ...prev];
+        });
+        showSyncMessage("Signal Decoded");
+      } else {
+        showSyncMessage("No Intent Found");
+      }
+    } catch (e) {
+      console.error("Reprocess failed:", e);
+      showSyncMessage("Reprocess Failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const addGoalManually = () => {
     const trimmedInput = manualGoalInput.trim();
     if (!trimmedInput) return;
@@ -462,6 +495,9 @@ const App: React.FC = () => {
                         <p className="text-sm font-bold text-zinc-200 italic line-clamp-2">"{note.transcription || 'Unresolved...'}"</p>
                         <span className="text-[8px] font-black uppercase tracking-widest text-zinc-600">{new Date(note.timestamp).toLocaleString()}</span>
                       </div>
+                      <button onClick={() => reprocessVoiceNote(note)} className="p-3 text-zinc-800 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100" title="Reprocess Signal">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                      </button>
                       <button onClick={() => removeVoiceNote(note.id)} className="p-3 text-zinc-800 hover:text-red-900 transition-all opacity-0 group-hover:opacity-100">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
