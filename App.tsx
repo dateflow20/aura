@@ -5,19 +5,19 @@ import { scheduleTaskReminders, requestNotificationPermission } from './services
 import { saveVoiceNote, getAllVoiceNotes, deleteVoiceNote as dbDeleteVoiceNote } from './services/db';
 import { syncTodosToCloud, syncTodosFromCloud, syncSettingsToCloud, syncSettingsFromCloud, debouncedSync } from './services/syncService';
 import { supabase } from './services/supabaseClient';
-import VoiceMode from './components/VoiceMode.tsx';
-import ScannerMode from './components/ScannerMode.tsx';
-import CalendarView from './components/CalendarView.tsx';
-import EditTaskModal from './components/EditTaskModal.tsx';
-import LandingPage from './components/LandingPage.tsx';
-import Auth from './components/Auth.tsx';
-import Onboarding from './components/Onboarding.tsx';
-import SettingsPanel from './components/SettingsPanel.tsx';
-import PWAInstallPrompt from './components/PWAInstallPrompt.tsx';
-import OfflineIndicator from './components/OfflineIndicator.tsx';
-import NewYearPopup from './components/NewYearPopup.tsx';
-import NewYearWizard from './components/NewYearWizard.tsx';
-import YearlyDashboard from './components/YearlyDashboard.tsx';
+import VoiceMode from './components/VoiceMode';
+import ScannerMode from './components/ScannerMode';
+import CalendarView from './components/CalendarView';
+import EditTaskModal from './components/EditTaskModal';
+import LandingPage from './components/LandingPage';
+import Auth from './components/Auth';
+import Onboarding from './components/Onboarding';
+import SettingsPanel from './components/SettingsPanel';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import OfflineIndicator from './components/OfflineIndicator';
+import NewYearPopup from './components/NewYearPopup';
+import NewYearWizard from './components/NewYearWizard';
+import YearlyDashboard from './components/YearlyDashboard';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.Landing);

@@ -225,9 +225,9 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
 
     return result.map((t: any) => ({
       ...t,
-      id: t.id || Math.random().toString(36).substr(2, 9),
+      id: t.id || Math.random().toString(36).substring(2, 11),
       createdAt: t.createdAt || new Date().toISOString(),
-      steps: (t.steps || []).map((s: any) => ({ ...s, id: s.id || Math.random().toString(36).substr(2, 5) })),
+      steps: (t.steps || []).map((s: any) => ({ ...s, id: s.id || Math.random().toString(36).substring(2, 7) })),
       category: category,
       isLocked: category === 'new-year',
       progress: 0
@@ -283,7 +283,7 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
 
             // Create Goal
             newGoals.push({
-              id: Math.random().toString(36).substr(2, 9),
+              id: Math.random().toString(36).substring(2, 11),
               goal: cleanText,
               priority: priority,
               completed: false,
@@ -343,9 +343,9 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
             const parsed = JSON.parse(text);
             const tasks = (parsed.goals || []).map((t: any) => ({
               ...t,
-              id: Math.random().toString(36).substr(2, 9),
+              id: Math.random().toString(36).substring(2, 11),
               createdAt: new Date().toISOString(),
-              steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+              steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substring(2, 7) })),
             }));
 
             return { tasks, transcription: parsed.transcription || "Audio processed." };
@@ -405,9 +405,9 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
       return {
         tasks: (parsed.goals || []).map((t: any) => ({
           ...t,
-          id: Math.random().toString(36).substr(2, 9),
+          id: Math.random().toString(36).substring(2, 11),
           createdAt: new Date().toISOString(),
-          steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+          steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substring(2, 7) })),
         })),
         transcription: parsed.transcription || "Audio processed via OpenRouter."
       };
@@ -459,9 +459,9 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
             const parsed = JSON.parse(text);
             return (parsed.goals || []).map((t: any) => ({
               ...t,
-              id: Math.random().toString(36).substr(2, 9),
+              id: Math.random().toString(36).substring(2, 11),
               createdAt: new Date().toISOString(),
-              steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+              steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substring(2, 7) })),
             }));
           } catch (modelError: any) {
             console.warn(`⚠️ Gemini Vision ${model} failed:`, modelError);
@@ -516,9 +516,9 @@ export const extractTasksFromImage = async (base64Image: string, mimeType: strin
 
       return (parsed.goals || []).map((t: any) => ({
         ...t,
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 11),
         createdAt: new Date().toISOString(),
-        steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substr(2, 5) })),
+        steps: (t.steps || []).map((s: any) => ({ ...s, id: Math.random().toString(36).substring(2, 7) })),
       }));
 
     } catch (fallbackError) {
@@ -561,7 +561,7 @@ export const smartScheduleGoal = async (goal: Todo, dailyTodos: Todo[], user?: U
     if (!response) return null;
 
     return {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       goal: response.trim(),
       priority: 'medium',
       completed: false,

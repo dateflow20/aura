@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { extractTasks, extractTasksFromAudio } from '../services/geminiService';
+import { extractTasks, extractTasksFromAudio, extractTasksFromImage } from '../services/geminiService';
 import { Todo, UserProfile, NeuralPattern } from '../types';
 
 interface NewYearWizardProps {
@@ -71,11 +71,10 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
     const processImage = async (base64: string, mimeType: string) => {
         setStep('processing');
         try {
-            const { extractTasksFromImage } = await import('../services/geminiService');
             const tasks = await extractTasksFromImage(base64, mimeType, []);
             const goals = tasks.map(t => ({
                 ...t,
-                id: Math.random().toString(36).substr(2, 9),
+                id: Math.random().toString(36).substring(2, 11),
                 category: 'new-year' as const,
                 isLocked: true,
                 progress: 0,
@@ -98,7 +97,7 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
         }
 
         // @ts-ignore
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
@@ -145,7 +144,7 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                     ...prev,
                     ...newGoals.map(g => ({
                         ...g,
-                        id: Math.random().toString(36).substr(2, 9),
+                        id: Math.random().toString(36).substring(2, 11),
                         isLocked: true,
                         progress: 0,
                         createdAt: new Date().toISOString()
@@ -171,7 +170,7 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
             const goals = await extractTasks(textInput, [], patterns || { frequentLabels: [], preferredLanguage: 'English', lastActionType: 'Inception', averageTaskComplexity: 1 }, user || undefined, 'new-year');
             setGeneratedGoals(goals.map(g => ({
                 ...g,
-                id: Math.random().toString(36).substr(2, 9),
+                id: Math.random().toString(36).substring(2, 11),
                 isLocked: true,
                 progress: 0,
                 createdAt: new Date().toISOString()
