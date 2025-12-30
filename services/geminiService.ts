@@ -277,7 +277,6 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
               priority: priority,
               completed: false,
               createdAt: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
               steps: [],
               category: category,
               isLocked: category === 'new-year',
