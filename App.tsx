@@ -163,10 +163,10 @@ const App: React.FC = () => {
         }
       }
 
-      // Check New Year Popup Logic (Jan 1 - Jan 14)
+      // Check New Year Popup Logic (Dec 31 - Jan 14)
       const now = new Date();
       const currentYear = now.getFullYear();
-      const isNewYearWindow = now.getMonth() === 0 && now.getDate() <= 14; // Jan 1 - 14
+      const isNewYearWindow = (now.getMonth() === 11 && now.getDate() >= 31) || (now.getMonth() === 0 && now.getDate() <= 14);
       const hasSeenPopup = localStorage.getItem(`gtd_newyear_seen_${currentYear}`);
 
       // For testing, we can force it or just rely on the date
