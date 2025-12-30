@@ -719,6 +719,7 @@ const App: React.FC = () => {
           dailyTodos={todos.filter(t => t.category !== 'new-year' && !t.completed)}
           onClose={() => setShowYearlyDashboard(false)}
           onAddDailyTask={(task) => setTodos(prev => [task, ...prev])}
+          onAddGoal={() => { setShowYearlyDashboard(false); setShowNewYearWizard(true); }}
           user={user}
         />
       )}

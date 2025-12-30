@@ -7,10 +7,11 @@ interface YearlyDashboardProps {
     dailyTodos: Todo[];
     onClose: () => void;
     onAddDailyTask: (task: Todo) => void;
+    onAddGoal: () => void;
     user: UserProfile | null;
 }
 
-const YearlyDashboard: React.FC<YearlyDashboardProps> = ({ goals, dailyTodos, onClose, onAddDailyTask, user }) => {
+const YearlyDashboard: React.FC<YearlyDashboardProps> = ({ goals, dailyTodos, onClose, onAddDailyTask, onAddGoal, user }) => {
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     const overallProgress = goals.length > 0
@@ -43,9 +44,15 @@ const YearlyDashboard: React.FC<YearlyDashboardProps> = ({ goals, dailyTodos, on
                     <h2 className="text-xl font-black uppercase tracking-tighter text-amber-500">2026 Dashboard</h2>
                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mt-1">Long-term Neural Registry</p>
                 </div>
-                <button onClick={onClose} className="p-3 rounded-full hover:bg-zinc-900 transition-all">
-                    <svg className="w-6 h-6 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={onAddGoal} className="p-3 rounded-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-all flex items-center gap-2 px-4">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Add Goal</span>
+                    </button>
+                    <button onClick={onClose} className="p-3 rounded-full hover:bg-zinc-900 transition-all">
+                        <svg className="w-6 h-6 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
