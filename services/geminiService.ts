@@ -202,7 +202,7 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
   }
 };
 
-export const extractTasks = async (prompt: string, currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile): Promise<Todo[]> => {
+export const extractTasks = async (prompt: string, currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile, category: 'daily' | 'new-year' = 'daily'): Promise<Todo[]> => {
   try {
     const resp = await callAiWithFallback(prompt, {
       responseMimeType: "application/json",
@@ -217,6 +217,9 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
       id: t.id || Math.random().toString(36).substr(2, 9),
       createdAt: t.createdAt || new Date().toISOString(),
       steps: (t.steps || []).map((s: any) => ({ ...s, id: s.id || Math.random().toString(36).substr(2, 5) })),
+      category: category,
+      isLocked: category === 'new-year',
+      progress: 0
     }));
   } catch (e) {
     console.error("Task extraction failed:", e);
@@ -274,7 +277,11 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
               priority: priority,
               completed: false,
               createdAt: new Date().toISOString(),
-              steps: []
+              createdAt: new Date().toISOString(),
+              steps: [],
+              category: category,
+              isLocked: category === 'new-year',
+              progress: 0
             });
           }
         });
@@ -526,5 +533,34 @@ USER_SIGNAL: ${message}
   } catch (error) {
     console.error("Chat Error:", error);
     return "I am unable to process that signal right now.";
+  }
+};
+
+export const smartScheduleGoal = async (goal: Todo, dailyTodos: Todo[], user?: UserProfile): Promise<Todo | null> => {
+  const prompt = `
+  I have a Yearly Goal: "${goal.goal}".
+  My current daily tasks are: ${JSON.stringify(dailyTodos.map(t => t.goal))}.
+  
+  Create a SINGLE, small, actionable sub-task that I can do TODAY to make progress on this yearly goal.
+  It should be easy and take less than 30 minutes.
+  Return ONLY the task text.
+  `;
+
+  try {
+    const response = await callAiWithFallback(prompt, { responseMimeType: "text/plain" }, undefined, user, false);
+    if (!response) return null;
+
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      goal: response.trim(),
+      priority: 'medium',
+      completed: false,
+      createdAt: new Date().toISOString(),
+      category: 'daily',
+      description: `Derived from Yearly Goal: ${goal.goal}`
+    };
+  } catch (e) {
+    console.error("Smart Schedule failed:", e);
+    return null;
   }
 };

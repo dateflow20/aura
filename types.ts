@@ -17,6 +17,9 @@ export interface Todo {
   steps?: TodoStep[];
   pinned?: boolean;
   calendarSynced?: boolean;
+  category?: 'daily' | 'new-year';
+  isLocked?: boolean;
+  progress?: number; // 0-100
 }
 
 export interface NeuralPattern {
@@ -70,7 +73,8 @@ export enum AppMode {
   List = 'list',
   Calendar = 'calendar',
   Notes = 'notes',
-  Scan = 'scan'
+  Scan = 'scan',
+  NewYear = 'new-year'
 }
 
 export enum ChatSessionMode {

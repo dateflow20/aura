@@ -15,6 +15,9 @@ import Onboarding from './components/Onboarding.tsx';
 import SettingsPanel from './components/SettingsPanel.tsx';
 import PWAInstallPrompt from './components/PWAInstallPrompt.tsx';
 import OfflineIndicator from './components/OfflineIndicator.tsx';
+import NewYearPopup from './components/NewYearPopup.tsx';
+import NewYearWizard from './components/NewYearWizard.tsx';
+import YearlyDashboard from './components/YearlyDashboard.tsx';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.Landing);
@@ -43,6 +46,11 @@ const App: React.FC = () => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+
+  // New Year Feature State
+  const [showNewYearPopup, setShowNewYearPopup] = useState(false);
+  const [showNewYearWizard, setShowNewYearWizard] = useState(false);
+  const [showYearlyDashboard, setShowYearlyDashboard] = useState(false);
 
   const [settings, setSettings] = useState<GTDSettings>({
     language: 'en',
@@ -153,6 +161,20 @@ const App: React.FC = () => {
           setSettings(cloudSettings);
           localStorage.setItem('gtd_settings', JSON.stringify(cloudSettings));
         }
+      }
+
+      // Check New Year Popup Logic (Jan 1 - Jan 14)
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const isNewYearWindow = now.getMonth() === 0 && now.getDate() <= 14; // Jan 1 - 14
+      const hasSeenPopup = localStorage.getItem(`gtd_newyear_seen_${currentYear}`);
+
+      // For testing, we can force it or just rely on the date
+      // Uncomment to force test: const isNewYearWindow = true; 
+
+      if (isNewYearWindow && !hasSeenPopup && savedUser) {
+        // Delay slightly for effect
+        setTimeout(() => setShowNewYearPopup(true), 2000);
       }
 
       try {
@@ -411,6 +433,14 @@ const App: React.FC = () => {
 
   const getThemeClass = (l: string, d: string) => settings.theme === 'pure-white' ? l : d;
 
+  const handleNewYearCommit = (newGoals: Todo[]) => {
+    setTodos(prev => [...newGoals, ...prev]);
+    setShowNewYearWizard(false);
+    setShowNewYearPopup(false);
+    localStorage.setItem(`gtd_newyear_seen_${new Date().getFullYear()}`, 'true');
+    showSyncMessage("2026 Vision Architected");
+  };
+
   if (appState === AppState.Landing) return <LandingPage onStart={() => setAppState(AppState.Auth)} />;
   if (appState === AppState.Auth) return <Auth
     onComplete={(email) => {
@@ -441,16 +471,27 @@ const App: React.FC = () => {
         </div>
 
         {/* Settings Button */}
-        <button
-          onClick={() => setShowSettings(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-zinc-900 transition-all group"
-        >
-          <svg className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all group-hover:rotate-90 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white">Settings</span>
-        </button>
+        {/* Settings & Dashboard Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowYearlyDashboard(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-zinc-900 transition-all group border border-amber-500/20 hover:border-amber-500/50"
+          >
+            <span className="text-lg">✨</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 group-hover:text-amber-400">2026</span>
+          </button>
+
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-zinc-900 transition-all group"
+          >
+            <svg className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all group-hover:rotate-90 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white">Settings</span>
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 max-w-4xl mx-auto w-full p-6 pb-40 overflow-x-hidden">
@@ -653,6 +694,32 @@ const App: React.FC = () => {
             setVoiceHistory([]);
             setAppState(AppState.Auth);
           }}
+        />
+      )}
+
+      {showNewYearPopup && (
+        <NewYearPopup
+          onStart={() => { setShowNewYearPopup(false); setShowNewYearWizard(true); }}
+          onDismiss={() => { setShowNewYearPopup(false); localStorage.setItem(`gtd_newyear_seen_${new Date().getFullYear()}`, 'true'); }}
+        />
+      )}
+
+      {showNewYearWizard && (
+        <NewYearWizard
+          onClose={() => setShowNewYearWizard(false)}
+          onCommit={handleNewYearCommit}
+          user={user}
+          patterns={patterns}
+        />
+      )}
+
+      {showYearlyDashboard && (
+        <YearlyDashboard
+          goals={todos.filter(t => t.category === 'new-year')}
+          dailyTodos={todos.filter(t => t.category !== 'new-year' && !t.completed)}
+          onClose={() => setShowYearlyDashboard(false)}
+          onAddDailyTask={(task) => setTodos(prev => [task, ...prev])}
+          user={user}
         />
       )}
 

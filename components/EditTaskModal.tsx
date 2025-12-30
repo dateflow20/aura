@@ -105,7 +105,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ todo, onSave, onClose, on
 
         <div className="p-6 border-t border-zinc-800 bg-zinc-950/40 flex gap-4">
           <button onClick={() => setIsEditing(!isEditing)} className="px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-zinc-800 text-zinc-400">{isEditing ? 'Lock' : 'Edit'}</button>
-          {onDelete && (
+          {onDelete && !todo.isLocked && (
             <button
               onClick={() => {
                 if (window.confirm(`Delete goal: "${todo.goal}"?`)) {
@@ -117,6 +117,12 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ todo, onSave, onClose, on
             >
               Delete
             </button>
+          )}
+          {todo.isLocked && (
+            <div className="px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-zinc-800/50 text-zinc-500 flex items-center gap-2 cursor-not-allowed">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" /></svg>
+              Locked
+            </div>
           )}
           <button onClick={() => handleSave()} className="flex-1 px-8 py-4 bg-white text-black rounded-2xl font-black text-[10px] uppercase tracking-widest">Commit Changes</button>
         </div>
