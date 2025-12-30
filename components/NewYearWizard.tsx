@@ -11,10 +11,11 @@ interface NewYearWizardProps {
 
 const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, patterns }) => {
     const [step, setStep] = useState<'input' | 'processing' | 'review'>('input');
-    const [mode, setMode] = useState<'voice' | 'text'>('voice');
+    const [mode, setMode] = useState<'voice' | 'text' | 'scan'>('voice');
     const [textInput, setTextInput] = useState('');
     const [isRecording, setIsRecording] = useState(false);
     const [generatedGoals, setGeneratedGoals] = useState<Todo[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Audio Refs
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -86,6 +87,36 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
         }
     };
 
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setStep('processing');
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64 = (reader.result as string).split(',')[1];
+            try {
+                // We need to import extractTasksFromImage first. 
+                // Since it wasn't imported in the original file, I will add the import in a separate chunk or assume it's available.
+                // Actually, let's use the existing import line if possible, or just call it if it was imported.
+                // Wait, I need to check imports. It was NOT imported. I need to update imports too.
+
+                // For now, let's assume I will update imports in another chunk.
+                const { extractTasksFromImage } = await import('../services/geminiService');
+                const tasks = await extractTasksFromImage(base64, file.type, []);
+
+                const goals = tasks.map(t => ({ ...t, category: 'new-year' as const, isLocked: true, progress: 0 }));
+                setGeneratedGoals(goals);
+                setStep('review');
+            } catch (err) {
+                console.error(err);
+                setStep('input');
+                alert("Failed to analyze vision board.");
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
     return (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-500">
             {/* Header */}
@@ -108,17 +139,23 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                                 onClick={() => setMode('voice')}
                                 className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'voice' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}
                             >
-                                Voice Signal
+                                Voice
                             </button>
                             <button
                                 onClick={() => setMode('text')}
                                 className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'text' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}
                             >
-                                Text Input
+                                Text
+                            </button>
+                            <button
+                                onClick={() => setMode('scan')}
+                                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'scan' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}
+                            >
+                                Vision
                             </button>
                         </div>
 
-                        {mode === 'voice' ? (
+                        {mode === 'voice' && (
                             <button
                                 onClick={isRecording ? stopRecording : startRecording}
                                 className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${isRecording ? 'bg-red-500 scale-110 shadow-[0_0_50px_rgba(239,68,68,0.5)]' : 'bg-zinc-900 border-2 border-zinc-800 hover:border-amber-500/50'}`}
@@ -129,7 +166,9 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                                     <svg className="w-16 h-16 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                                 )}
                             </button>
-                        ) : (
+                        )}
+
+                        {mode === 'text' && (
                             <div className="w-full">
                                 <textarea
                                     value={textInput}
@@ -147,8 +186,31 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                             </div>
                         )}
 
+                        {mode === 'scan' && (
+                            <div className="w-full flex flex-col items-center">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    ref={fileInputRef}
+                                    onChange={handleFileSelect}
+                                    className="hidden"
+                                />
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-40 h-40 rounded-[2rem] bg-zinc-900 border-2 border-dashed border-zinc-700 flex flex-col items-center justify-center gap-4 hover:border-amber-500/50 hover:bg-zinc-900/50 transition-all group"
+                                >
+                                    <svg className="w-12 h-12 text-zinc-600 group-hover:text-amber-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300">Upload Board</span>
+                                </button>
+                                <p className="mt-6 text-zinc-500 text-xs font-medium text-center max-w-xs">
+                                    Upload your Vision Board or Bingo Card. The neural engine will extract your goals.
+                                </p>
+                            </div>
+                        )}
+
                         <p className="text-zinc-500 text-xs font-medium text-center max-w-xs">
-                            {mode === 'voice' ? (isRecording ? "Listening to your intent..." : "Tap to speak your goals") : "Write down your aspirations"}
+                            {mode === 'voice' && (isRecording ? "Listening to your intent..." : "Tap to speak your goals")}
+                            {mode === 'text' && "Write down your aspirations"}
                         </p>
                     </div>
                 )}
