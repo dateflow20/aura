@@ -171,28 +171,39 @@ const callAiWithFallback = async (prompt: string, config: any, patterns?: Neural
 
       // 3. Try OpenRouter (Fallback 2)
       try {
-        const openRouterKey = import.meta.env.VITE_OPENROUTER_API_KEY_1;
-        if (!openRouterKey) throw new Error("No OpenRouter key");
+        const openRouterKeys = [import.meta.env.VITE_OPENROUTER_API_KEY_1, import.meta.env.VITE_OPENROUTER_API_KEY_2].filter(Boolean);
+        if (openRouterKeys.length === 0) throw new Error("No OpenRouter keys");
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${openRouterKey}`,
-            "HTTP-Referer": "https://getthingsdone.app",
-          },
-          body: JSON.stringify({
-            model: "mistralai/mistral-7b-instruct:free", // Free fallback model
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: prompt }
-            ]
-          })
-        });
+        let lastOrError;
+        for (const openRouterKey of openRouterKeys) {
+          try {
 
-        if (!response.ok) throw new Error(`OpenRouter Error: ${response.status}`);
-        const data = await response.json();
-        return data.choices[0].message.content;
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${openRouterKey}`,
+                "HTTP-Referer": "https://getthingsdone.app",
+              },
+              body: JSON.stringify({
+                model: "mistralai/mistral-7b-instruct:free", // Free fallback model
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: prompt }
+                ]
+              })
+            });
+
+            if (!response.ok) throw new Error(`OpenRouter Error: ${response.status}`);
+            const data = await response.json();
+            return data.choices[0].message.content;
+          } catch (orKeyError) {
+            console.warn("⚠️ OpenRouter key failed, trying next...", orKeyError);
+            lastOrError = orKeyError;
+            continue;
+          }
+        }
+        throw lastOrError || new Error("All OpenRouter keys failed");
 
       } catch (finalError) {
         console.error("❌ ALL NEURAL LINKS FAILED", finalError);
