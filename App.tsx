@@ -323,11 +323,13 @@ const App: React.FC = () => {
             setVoiceNotes(prev => ({ ...prev, [noteId]: vNote }));
 
             if (tasks.length > 0) {
-              const updatedTasks = tasks.map(t => {
-                const isNew = !todos.find(old => old.id === t.id);
-                return isNew ? { ...t, voiceNoteId: noteId } : t;
+              const newTasksWithId = tasks.map(t => ({ ...t, voiceNoteId: noteId }));
+              setTodos(prev => {
+                // Prevent duplicates by ID (though unlikely with random IDs)
+                const existingIds = new Set(prev.map(p => p.id));
+                const uniqueNewTasks = newTasksWithId.filter(t => !existingIds.has(t.id));
+                return [...uniqueNewTasks, ...prev];
               });
-              setTodos(updatedTasks);
             }
 
             if (!isForChat) showSyncMessage("Neural Signal Cached");
@@ -362,8 +364,10 @@ const App: React.FC = () => {
       const responseText = await chatWithGTD(msg, chatHistory, todos, patterns, user || undefined, chatMode);
       setChatHistory(prev => [...prev, { id: Date.now().toString(), role: 'model', content: responseText, timestamp: new Date().toISOString() }]);
       if (chatMode === ChatSessionMode.Override) {
-        const updated = await extractTasks(msg, todos, patterns, user || undefined);
-        setTodos(updated);
+        const newTasks = await extractTasks(msg, todos, patterns, user || undefined);
+        if (newTasks.length > 0) {
+          setTodos(prev => [...newTasks, ...prev]);
+        }
       }
     } catch (e) {
       setChatHistory(prev => [...prev, { id: Date.now().toString(), role: 'model', content: "Signal lost. Re-establishing...", timestamp: new Date().toISOString() }]);

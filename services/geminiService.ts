@@ -280,14 +280,14 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
         });
 
         if (newGoals.length > 0) {
-          return [...newGoals, ...currentTodos];
+          return newGoals;
         }
       }
     } catch (fallbackError) {
       console.error("Even fallback failed:", fallbackError);
     }
 
-    return currentTodos;
+    return [];
   }
 };
 
