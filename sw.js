@@ -1,15 +1,29 @@
 
-const CACHE_NAME = 'gtd-v1.3';
+const CACHE_NAME = 'gtd-newyear-v2.0';
 const ASSETS = [
   '/',
   '/index.html',
-  '/index.tsx',
   '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Force activation
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    }).then(() => self.clients.claim()) // Take control immediately
   );
 });
 
