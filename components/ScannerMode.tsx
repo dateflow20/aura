@@ -1,15 +1,17 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { extractTasksFromImage } from '../services/geminiService';
-import { Todo, GTDSettings } from '../types';
+import { Todo, GTDSettings, NeuralPattern, UserProfile } from '../types';
 
 interface ScannerModeProps {
   onTasksUpdated: (tasks: Todo[]) => void;
   onClose: () => void;
   currentTodos: Todo[];
   settings: GTDSettings;
+  patterns?: NeuralPattern;
+  user?: UserProfile | null;
 }
 
-const ScannerMode: React.FC<ScannerModeProps> = ({ onClose, onTasksUpdated, currentTodos, settings }) => {
+const ScannerMode: React.FC<ScannerModeProps> = ({ onClose, onTasksUpdated, currentTodos, settings, patterns, user }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -67,7 +69,7 @@ const ScannerMode: React.FC<ScannerModeProps> = ({ onClose, onTasksUpdated, curr
     const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
     try {
-      const newTasks = await extractTasksFromImage(base64Image, 'image/jpeg', currentTodos);
+      const newTasks = await extractTasksFromImage(base64Image, 'image/jpeg', currentTodos, patterns, user || undefined);
       if (newTasks.length > 0) {
         onTasksUpdated(newTasks);
         onClose();

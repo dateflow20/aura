@@ -315,12 +315,25 @@ const App: React.FC = () => {
   const addGoalManually = () => {
     const trimmedInput = manualGoalInput.trim();
     if (!trimmedInput) return;
+
+    let dueDate: string | undefined = undefined;
+    const lowerInput = trimmedInput.toLowerCase();
+    if (lowerInput.includes('today')) {
+      dueDate = new Date().toISOString();
+    } else if (lowerInput.includes('tomorrow')) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      dueDate = tomorrow.toISOString();
+    }
+
     const newGoal: Todo = {
       id: Math.random().toString(36).substr(2, 9),
       goal: trimmedInput,
       priority: 'medium',
+      dueDate: dueDate,
       completed: false,
       createdAt: new Date().toISOString(),
+      category: 'daily',
       steps: []
     };
     setTodos(prev => [newGoal, ...prev]);
@@ -783,7 +796,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {mode === AppMode.Scan && <ScannerMode settings={settings} currentTodos={todos} onTasksUpdated={setTodos} onClose={() => setMode(AppMode.Notes)} />}
+        {mode === AppMode.Scan && <ScannerMode settings={settings} currentTodos={todos} onTasksUpdated={setTodos} onClose={() => setMode(AppMode.Notes)} patterns={patterns} user={user} />}
         {mode === AppMode.Calendar && <CalendarView todos={todos} onTasksUpdated={setTodos} onEditTask={setEditingTodo} />}
       </main>
 

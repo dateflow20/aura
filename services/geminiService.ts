@@ -31,6 +31,7 @@ COGNITIVE PROTOCOLS:
 - If no goals are detected (casual chat), return an empty goals array but include a faithful transcription.
 - For verified goals, automatically decompose into 3-5 logical, high-impact sub-steps.
 - Provide a concise transcription of the user's spoken or written word.
+- INTELLIGENT TEMPORAL COORDINATES: If the user mentions "today", "tomorrow", "this weekend", or a specific day/date, you MUST set the 'dueDate' to the appropriate ISO date string.
 - INTELLIGENT PRIORITY: If user says "urgent", "high priority", "ASAP", or implies a deadline of today/tomorrow, set priority to 'high'. If "eventually" or "low priority", set 'low'. Default is 'medium'.
 `;
   } else {
@@ -259,6 +260,16 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
             priority = 'low';
           }
 
+          // 3. Detect Temporal Coordinates (Today/Tomorrow)
+          let dueDate: string | undefined = undefined;
+          if (lowerText.includes('today')) {
+            dueDate = new Date().toISOString();
+          } else if (lowerText.includes('tomorrow')) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            dueDate = tomorrow.toISOString();
+          }
+
           // 3. Clean Text (Remove filler phrases)
           const fillers = [
             "i need to", "i want to", "have to", "please add", "add a goal to", "create a task to",
@@ -286,6 +297,7 @@ export const extractTasks = async (prompt: string, currentTodos: Todo[], pattern
               id: Math.random().toString(36).substring(2, 11),
               goal: cleanText,
               priority: priority,
+              dueDate: dueDate,
               completed: false,
               createdAt: new Date().toISOString(),
               steps: [],
@@ -424,8 +436,8 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
   }
 };
 
-export const extractTasksFromImage = async (base64Image: string, mimeType: string, currentTodos: Todo[]): Promise<Todo[]> => {
-  const promptText = `Analyze this image and extract any clear tasks, goals, or action items. Return ONLY a JSON object with a "goals" array. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}`;
+export const extractTasksFromImage = async (base64Image: string, mimeType: string, currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile): Promise<Todo[]> => {
+  const promptText = `${getSystemInstruction(patterns, user, true)}\n\nAnalyze this image and extract any clear tasks, goals, or action items. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}`;
 
   // 1. Try Gemini Vision (Primary)
   try {

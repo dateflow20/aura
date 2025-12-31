@@ -16,6 +16,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ todos, onTasksUpdated, onEd
   const month = currentDate.getMonth();
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+
   const firstDayOfMonth = new Date(year, month, 1).getDay();
 
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -27,6 +28,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ todos, onTasksUpdated, onEd
     todos.forEach(t => {
       if (!t.dueDate) return;
       const d = new Date(t.dueDate);
+      if (isNaN(d.getTime())) return; // Skip invalid dates
       if (d.getFullYear() === year && d.getMonth() === month) {
         const date = d.getDate();
         if (!map[date]) map[date] = [];
@@ -38,7 +40,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ todos, onTasksUpdated, onEd
 
   // Tasks without dates (The Backlog)
   const unscheduledTasks = useMemo(() => {
-    return todos.filter(t => !t.dueDate && !t.completed);
+    return todos.filter(t => {
+      if (t.completed) return false;
+      if (!t.dueDate) return true;
+      const d = new Date(t.dueDate);
+      return isNaN(d.getTime()); // If date is invalid, consider it unscheduled
+    });
   }, [todos]);
 
   const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -53,8 +60,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ todos, onTasksUpdated, onEd
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId');
     const targetDate = new Date(year, month, day, 9, 0, 0); // Default to 9 AM
-    
-    const updatedTodos = todos.map(t => 
+
+    const updatedTodos = todos.map(t =>
       t.id === taskId ? { ...t, dueDate: targetDate.toISOString() } : t
     );
     onTasksUpdated(updatedTodos);
@@ -104,40 +111,37 @@ const CalendarView: React.FC<CalendarViewProps> = ({ todos, onTasksUpdated, onEd
             const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
             const isSelected = selectedDay === day;
             const dayTasks = tasksByDay[day] || [];
-            
+
             return (
-              <div 
-                key={day} 
+              <div
+                key={day}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, day)}
                 onClick={() => setSelectedDay(day)}
                 className={`relative bg-zinc-900 p-2 transition-all cursor-pointer group min-h-[80px] sm:min-h-0 ${isSelected ? 'bg-blue-900/10' : 'hover:bg-zinc-800/40'}`}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className={`text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-lg transition-all ${
-                    isToday ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 
-                    isSelected ? 'text-blue-400' : 'text-zinc-600 group-hover:text-zinc-400'
-                  }`}>
+                  <span className={`text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-lg transition-all ${isToday ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]' :
+                      isSelected ? 'text-blue-400' : 'text-zinc-600 group-hover:text-zinc-400'
+                    }`}>
                     {day}
                   </span>
                   {dayTasks.length > 0 && (
                     <div className="flex gap-0.5">
                       {dayTasks.slice(0, 3).map(t => (
-                        <div key={t.id} className={`w-1 h-1 rounded-full ${
-                          t.priority === 'high' ? 'bg-red-500' : t.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
-                        }`} />
+                        <div key={t.id} className={`w-1 h-1 rounded-full ${t.priority === 'high' ? 'bg-red-500' : t.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                          }`} />
                       ))}
                     </div>
                   )}
                 </div>
-                
+
                 <div className="hidden sm:flex flex-col gap-1 overflow-hidden">
                   {dayTasks.slice(0, 2).map(task => (
-                    <div key={task.id} className={`text-[8px] px-1.5 py-0.5 rounded border truncate ${
-                      task.completed ? 'bg-zinc-950 border-zinc-800 text-zinc-700 line-through' :
-                      task.priority === 'high' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
-                      'bg-blue-500/10 border-blue-500/20 text-blue-400'
-                    }`}>
+                    <div key={task.id} className={`text-[8px] px-1.5 py-0.5 rounded border truncate ${task.completed ? 'bg-zinc-950 border-zinc-800 text-zinc-700 line-through' :
+                        task.priority === 'high' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                          'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                      }`}>
                       {/* Refactored: changed task.task to task.goal to match Todo interface */}
                       {task.goal}
                     </div>
@@ -170,8 +174,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ todos, onTasksUpdated, onEd
               </div>
             ) : (
               selectedTasks.map(task => (
-                <div 
-                  key={task.id} 
+                <div
+                  key={task.id}
                   onClick={() => onEditTask(task)}
                   className={`p-3 rounded-2xl border bg-zinc-950/40 cursor-pointer hover:border-zinc-600 transition-all ${task.completed ? 'opacity-40 grayscale' : 'border-zinc-800'}`}
                 >
@@ -199,7 +203,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ todos, onTasksUpdated, onEd
               <div className="py-12 text-center opacity-10 italic text-xs">Awaiting task injection...</div>
             ) : (
               unscheduledTasks.map(task => (
-                <div 
+                <div
                   key={task.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, task.id)}
