@@ -89,8 +89,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      // Guest Mode: Skip authentication if enabled
-      const guestMode = import.meta.env.VITE_GUEST_MODE === 'true';
 
       const savedUser = localStorage.getItem('gtd_user') || localStorage.getItem('aura_user');
       const savedTodos = localStorage.getItem('gtd_todos') || localStorage.getItem('aura_todos');
@@ -102,17 +100,6 @@ const App: React.FC = () => {
         const u = JSON.parse(savedUser);
         setUser(u);
         setAppState(u.onboarded ? AppState.Main : AppState.Onboarding);
-      } else if (guestMode) {
-        // Auto-create guest user
-        const guestUser: UserProfile = {
-          name: 'Guest User',
-          email: 'guest@gtd.local',
-          focusArea: 'Testing & Exploration',
-          onboarded: true
-        };
-        setUser(guestUser);
-        setAppState(AppState.Main);
-        localStorage.setItem('gtd_user', JSON.stringify(guestUser));
       }
 
       let currentTodos: Todo[] = [];
@@ -152,7 +139,7 @@ const App: React.FC = () => {
 
       // Try to load from cloud (if user is authenticated)
       let currentUser = user;
-      if (savedUser && !guestMode) {
+      if (savedUser) {
         currentUser = JSON.parse(savedUser);
         const cloudTodos = await syncTodosFromCloud();
         if (cloudTodos && cloudTodos.length > 0) {
@@ -186,7 +173,7 @@ const App: React.FC = () => {
       const isNewYearWindow = (now.getMonth() === 11 && now.getDate() >= 31) || (now.getMonth() === 0 && now.getDate() <= 14);
       const hasSeenPopup = localStorage.getItem(`gtd_newyear_seen_${currentYear}`);
 
-      if (isNewYearWindow && !hasSeenPopup && (savedUser || guestMode)) {
+      if (isNewYearWindow && !hasSeenPopup && savedUser) {
         setTimeout(() => setShowNewYearPopup(true), 2000);
       }
 
@@ -217,12 +204,12 @@ const App: React.FC = () => {
           setUser(updatedUser);
           localStorage.setItem('gtd_user', JSON.stringify(updatedUser));
         }
-        // Popup removed as per user request - missed tasks still visible in Unfinished-Z section
+        setTimeout(() => setShowMissedPopup(true), 1500);
       }
 
       // Check for Tour
       const hasSeenTour = localStorage.getItem('gtd_tour_seen');
-      if (!hasSeenTour && (savedUser || guestMode)) {
+      if (!hasSeenTour && savedUser) {
         setTimeout(() => setShowTour(true), 3000);
       }
 
@@ -244,7 +231,7 @@ const App: React.FC = () => {
     if (user) localStorage.setItem('gtd_user', JSON.stringify(user));
 
     // Cloud sync (debounced to avoid excessive API calls)
-    if (user && user.email !== 'guest@gtd.local') {
+    if (user) {
       debouncedSync(async () => {
         await syncTodosToCloud(todos);
         await syncSettingsToCloud(user.id || user.email, settings);
@@ -535,24 +522,22 @@ const App: React.FC = () => {
   };
 
   if (appState === AppState.Landing) return <LandingPage onStart={() => setAppState(AppState.Auth)} />;
-  if (appState === AppState.Auth) return <Auth
-    onComplete={(email) => {
-      setUser({ name: '', email, focusArea: '', onboarded: false });
-      setAppState(AppState.Onboarding);
-    }}
-    onBack={() => setAppState(AppState.Landing)}
-    onGuestMode={() => {
-      const guestUser: UserProfile = {
-        name: 'Guest User',
-        email: 'guest@gtd.local',
-        focusArea: 'Testing & Exploration',
-        onboarded: true
-      };
-      setUser(guestUser);
-      setAppState(AppState.Main);
-      localStorage.setItem('gtd_user', JSON.stringify(guestUser));
-    }}
-  />;
+  if (appState === AppState.Auth) return (
+    <Auth
+      onComplete={(email) => {
+        const newUser: UserProfile = {
+          name: email.split('@')[0],
+          email: email,
+          focusArea: 'General Productivity',
+          onboarded: false
+        };
+        setUser(newUser);
+        setAppState(AppState.Onboarding);
+        localStorage.setItem('gtd_user', JSON.stringify(newUser));
+      }}
+      onBack={() => setAppState(AppState.Landing)}
+    />
+  );
   if (appState === AppState.Onboarding) return <Onboarding onComplete={(p, s) => { setUser(prev => ({ ...prev!, ...p, onboarded: true })); setSettings(prev => ({ ...prev, ...s })); setAppState(AppState.Main); }} />;
 
   return (

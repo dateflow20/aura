@@ -4,10 +4,9 @@ import { supabase } from '../services/supabaseClient';
 interface AuthProps {
   onComplete: (email: string) => void;
   onBack: () => void;
-  onGuestMode: () => void;
 }
 
-const Auth: React.FC<AuthProps> = ({ onComplete, onBack, onGuestMode }) => {
+const Auth: React.FC<AuthProps> = ({ onComplete, onBack }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -253,23 +252,6 @@ const Auth: React.FC<AuthProps> = ({ onComplete, onBack, onGuestMode }) => {
             )}
           </button>
         </div>
-
-        {/* Guest Mode */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-zinc-800"></div>
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-black px-2 text-zinc-600">Or</span>
-          </div>
-        </div>
-
-        <button
-          onClick={onGuestMode}
-          className="w-full py-3 border-2 border-zinc-800 hover:border-zinc-700 rounded-xl font-bold text-xs uppercase tracking-wider text-zinc-400 hover:text-white transition-all"
-        >
-          Continue as Guest
-        </button>
 
         <p className="text-xs text-zinc-600 text-center">
           By continuing, you agree to our Terms of Service and Privacy Policy

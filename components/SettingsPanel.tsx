@@ -218,10 +218,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
                                     </div>
                                     <div className="flex-1">
                                         <p className={`font-black text-lg ${isDark ? 'text-white' : 'text-black'}`}>
-                                            {user?.name || 'Guest User'}
+                                            {user?.name}
                                         </p>
                                         <p className={`text-sm ${isDark ? 'text-zinc-500' : 'text-zinc-600'}`}>
-                                            {user?.email || 'guest@gtd.local'}
+                                            {user?.email}
                                         </p>
                                         <p className={`text-xs ${isDark ? 'text-zinc-600' : 'text-zinc-500'} mt-1`}>
                                             Focus: {user?.focusArea || 'General Productivity'}
@@ -232,25 +232,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, settings, onSett
 
                             {/* Account Actions */}
                             <div className="space-y-3">
-                                {user?.email === 'guest@gtd.local' ? (
-                                    <div className={`p-4 rounded-[1.5rem] border ${isDark ? 'border-yellow-500/20 bg-yellow-500/10' : 'border-yellow-300 bg-yellow-50'}`}>
-                                        <p className={`text-sm font-bold ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
-                                            💡 You're using Guest Mode
-                                        </p>
-                                        <p className={`text-xs ${isDark ? 'text-yellow-500/70' : 'text-yellow-600'} mt-1`}>
-                                            Data is saved locally. Create an account to sync across devices.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className={`p-4 rounded-[1.5rem] border ${isDark ? 'border-green-500/20 bg-green-500/10' : 'border-green-300 bg-green-50'}`}>
-                                        <p className={`text-sm font-bold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
-                                            ✓ Cloud Sync Active
-                                        </p>
-                                        <p className={`text-xs ${isDark ? 'text-green-500/70' : 'text-green-600'} mt-1`}>
-                                            Your data syncs across all your devices
-                                        </p>
-                                    </div>
-                                )}
+                                <div className={`p-4 rounded-[1.5rem] border ${isDark ? 'border-green-500/20 bg-green-500/10' : 'border-green-300 bg-green-50'}`}>
+                                    <p className={`text-sm font-bold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                                        ✓ Cloud Sync Active
+                                    </p>
+                                    <p className={`text-xs ${isDark ? 'text-green-500/70' : 'text-green-600'} mt-1`}>
+                                        Your data syncs across all your devices
+                                    </p>
+                                </div>
 
                                 <button
                                     onClick={handleSignOut}
