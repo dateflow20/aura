@@ -66,6 +66,7 @@ export interface UserProfile {
   email: string;
   focusArea: string;
   onboarded: boolean;
+  consistencyScore?: number; // 0-100
 }
 
 export enum AppMode {

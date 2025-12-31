@@ -18,6 +18,7 @@ import OfflineIndicator from './components/OfflineIndicator';
 import NewYearPopup from './components/NewYearPopup';
 import NewYearWizard from './components/NewYearWizard';
 import YearlyDashboard from './components/YearlyDashboard';
+import MissedTasksPopup from './components/MissedTasksPopup';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.Landing);
@@ -51,6 +52,8 @@ const App: React.FC = () => {
   const [showNewYearPopup, setShowNewYearPopup] = useState(false);
   const [showNewYearWizard, setShowNewYearWizard] = useState(false);
   const [showYearlyDashboard, setShowYearlyDashboard] = useState(false);
+  const [missedTasks, setMissedTasks] = useState<Todo[]>([]);
+  const [showMissedPopup, setShowMissedPopup] = useState(false);
 
   const [settings, setSettings] = useState<GTDSettings>({
     language: 'en',
@@ -110,11 +113,24 @@ const App: React.FC = () => {
         localStorage.setItem('gtd_user', JSON.stringify(guestUser));
       }
 
+      let currentTodos: Todo[] = [];
       if (savedTodos) {
-        const raw = JSON.parse(savedTodos);
-        setTodos(raw.map((t: any) => ({ ...t, goal: t.goal || t.task })));
+        try {
+          const raw = JSON.parse(savedTodos);
+          currentTodos = raw.map((t: any) => ({ ...t, goal: t.goal || t.task }));
+          setTodos(currentTodos);
+        } catch (e) {
+          console.error('Failed to parse local todos:', e);
+        }
       }
-      if (savedSettings) setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
+
+      if (savedSettings) {
+        try {
+          setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
+        } catch (e) {
+          console.error('Failed to parse local settings:', e);
+        }
+      }
 
       // Load chat histories
       if (savedChatHistory) {
@@ -133,31 +149,29 @@ const App: React.FC = () => {
       }
 
       // Try to load from cloud (if user is authenticated)
+      let currentUser = user;
       if (savedUser && !guestMode) {
+        currentUser = JSON.parse(savedUser);
         const cloudTodos = await syncTodosFromCloud();
         if (cloudTodos && cloudTodos.length > 0) {
           // Merge cloud and local todos by ID to prevent data loss
-          const localTodos = savedTodos ? JSON.parse(savedTodos) : [];
           const todoMap = new Map();
-
           // Add cloud todos first
           cloudTodos.forEach(t => todoMap.set(t.id, t));
-
           // Add/update with local todos (local takes precedence if more recent)
-          localTodos.forEach((t: any) => {
+          currentTodos.forEach((t: any) => {
             const existing = todoMap.get(t.id);
             if (!existing || new Date(t.createdAt || 0) > new Date(existing.createdAt || 0)) {
               todoMap.set(t.id, t);
             }
           });
 
-          const mergedTodos = Array.from(todoMap.values()).map((t: any) => ({ ...t, goal: t.goal || t.task }));
-          setTodos(mergedTodos);
-          localStorage.setItem('gtd_todos', JSON.stringify(mergedTodos));
+          currentTodos = Array.from(todoMap.values()).map((t: any) => ({ ...t, goal: t.goal || t.task }));
+          setTodos(currentTodos);
+          localStorage.setItem('gtd_todos', JSON.stringify(currentTodos));
         }
 
-        const u = JSON.parse(savedUser);
-        const cloudSettings = await syncSettingsFromCloud(u.id);
+        const cloudSettings = await syncSettingsFromCloud(currentUser!.id || '');
         if (cloudSettings) {
           setSettings(cloudSettings);
           localStorage.setItem('gtd_settings', JSON.stringify(cloudSettings));
@@ -170,11 +184,7 @@ const App: React.FC = () => {
       const isNewYearWindow = (now.getMonth() === 11 && now.getDate() >= 31) || (now.getMonth() === 0 && now.getDate() <= 14);
       const hasSeenPopup = localStorage.getItem(`gtd_newyear_seen_${currentYear}`);
 
-      // For testing, we can force it or just rely on the date
-      // Uncomment to force test: const isNewYearWindow = true; 
-
-      if (isNewYearWindow && !hasSeenPopup && savedUser) {
-        // Delay slightly for effect
+      if (isNewYearWindow && !hasSeenPopup && (savedUser || guestMode)) {
         setTimeout(() => setShowNewYearPopup(true), 2000);
       }
 
@@ -184,6 +194,28 @@ const App: React.FC = () => {
         setVoiceNotes(noteMap);
       } catch (e) {
         console.error("Signal storage recovery fail:", e);
+      }
+
+      // Check for Missed Tasks (Yesterday or older)
+      const todayStr = new Date().toDateString();
+      const missed = currentTodos.filter(t => {
+        if (t.completed || !t.dueDate) return false;
+        const taskDate = new Date(t.dueDate);
+        return taskDate.toDateString() !== todayStr && taskDate < new Date();
+      });
+
+      if (missed.length > 0) {
+        setMissedTasks(missed);
+        // Update consistency score
+        if (currentUser) {
+          const penalty = missed.length * 5;
+          const currentScore = currentUser.consistencyScore ?? 100;
+          const newScore = Math.max(0, currentScore - penalty);
+          const updatedUser = { ...currentUser, consistencyScore: newScore };
+          setUser(updatedUser);
+          localStorage.setItem('gtd_user', JSON.stringify(updatedUser));
+        }
+        setTimeout(() => setShowMissedPopup(true), 1500);
       }
 
       requestNotificationPermission();
@@ -663,6 +695,38 @@ const App: React.FC = () => {
                 </div>
               </section>
 
+              {/* UNFINISHED-Z (Missed Daily Tasks) */}
+              {todos.filter(t => {
+                if (t.completed || !t.dueDate || t.category === 'new-year') return false;
+                const taskDate = new Date(t.dueDate);
+                return taskDate.toDateString() !== new Date().toDateString() && taskDate < new Date();
+              }).length > 0 && (
+                  <section className="space-y-4">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500/60 px-2">Unfinished-Z</h3>
+                    <div className="space-y-3">
+                      {todos.filter(t => {
+                        if (t.completed || !t.dueDate || t.category === 'new-year') return false;
+                        const taskDate = new Date(t.dueDate);
+                        return taskDate.toDateString() !== new Date().toDateString() && taskDate < new Date();
+                      }).map(t => (
+                        <div key={t.id} className="p-6 bg-red-500/5 border border-red-500/10 rounded-[2.5rem] flex items-center gap-5 hover:border-red-500/30 transition-all group">
+                          <button
+                            onClick={() => {
+                              setTodos(prev => prev.map(todo => todo.id === t.id ? { ...todo, completed: true } : todo));
+                              showSyncMessage("Signal Restored");
+                            }}
+                            className="flex-shrink-0 w-8 h-8 rounded-lg border-2 border-red-900/30 hover:border-red-500 transition-all"
+                          />
+                          <div onClick={() => setEditingTodo(t)} className="flex-1 min-w-0 cursor-pointer">
+                            <h3 className="font-black text-xl truncate text-zinc-400">{t.goal}</h3>
+                            <span className="text-[8px] font-black uppercase tracking-widest text-red-500/40">Missed Signal</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
               {/* FINISHED-E */}
               {showCompleted && (
                 <section className="space-y-4">
@@ -806,6 +870,14 @@ const App: React.FC = () => {
           user={user}
           autoScheduleEnabled={settings.autoScheduleEnabled}
           onToggleAutoSchedule={(enabled) => setSettings(prev => ({ ...prev, autoScheduleEnabled: enabled }))}
+        />
+      )}
+
+      {showMissedPopup && (
+        <MissedTasksPopup
+          missedTasks={missedTasks}
+          consistencyScore={user?.consistencyScore ?? 100}
+          onAcknowledge={() => setShowMissedPopup(false)}
         />
       )}
 
