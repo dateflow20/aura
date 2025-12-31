@@ -57,6 +57,7 @@ export interface GTDSettings {
   reminderMinutes: number;
   learningEnabled: boolean;
   noiseSuppression: boolean; // New setting added
+  autoScheduleEnabled: boolean; // New setting for AI auto-scheduling
 }
 
 export interface UserProfile {

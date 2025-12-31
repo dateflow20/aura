@@ -153,7 +153,8 @@ export const syncSettingsToCloud = async (userId: string, settings: GTDSettings)
                 eye_color: settings.eyeColor,
                 reminder_minutes: settings.reminderMinutes,
                 learning_enabled: settings.learningEnabled,
-                noise_suppression: settings.noiseSuppression
+                noise_suppression: settings.noiseSuppression,
+                auto_schedule_enabled: settings.autoScheduleEnabled
             });
 
         if (error) throw error;
@@ -194,7 +195,8 @@ export const syncSettingsFromCloud = async (userId: string): Promise<GTDSettings
             eyeColor: data.eye_color,
             reminderMinutes: data.reminder_minutes,
             learningEnabled: data.learning_enabled,
-            noiseSuppression: data.noise_suppression
+            noiseSuppression: data.noise_suppression,
+            autoScheduleEnabled: data.auto_schedule_enabled ?? false
         };
 
         console.log('✅ Settings loaded from cloud');

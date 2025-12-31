@@ -60,7 +60,8 @@ const App: React.FC = () => {
     eyeColor: 'white',
     reminderMinutes: 10,
     learningEnabled: true,
-    noiseSuppression: true
+    noiseSuppression: true,
+    autoScheduleEnabled: false
   });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -431,6 +432,45 @@ const App: React.FC = () => {
     }
   };
 
+  const runAutoArchitect = async () => {
+    if (!settings.autoScheduleEnabled || !user) return;
+
+    const yearlyGoals = todos.filter(t => t.category === 'new-year' && !t.completed);
+    if (yearlyGoals.length === 0) return;
+
+    // Check if we already scheduled something today to avoid spamming
+    const lastRun = localStorage.getItem('gtd_auto_architect_last_run');
+    if (lastRun === new Date().toDateString()) return;
+
+    showSyncMessage("Neural Auto-Architect Active", "learning");
+
+    try {
+      const { smartScheduleGoal } = await import('./services/geminiService');
+
+      // Pick a few goals to consider for today
+      const candidates = yearlyGoals.filter(g => !g.dueDate || new Date(g.dueDate).toDateString() !== new Date().toDateString());
+
+      for (const goal of candidates.slice(0, 3)) {
+        const newTask = await smartScheduleGoal(goal, todos.filter(t => !t.completed), user);
+        if (newTask) {
+          setTodos(prev => [newTask, ...prev]);
+          showSyncMessage(`Auto-Scheduled: ${newTask.goal}`, "sync");
+        }
+      }
+
+      localStorage.setItem('gtd_auto_architect_last_run', new Date().toDateString());
+    } catch (e) {
+      console.error("Auto-Architect Error:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (settings.autoScheduleEnabled && user) {
+      const timer = setTimeout(runAutoArchitect, 5000); // Run 5s after load
+      return () => clearTimeout(timer);
+    }
+  }, [settings.autoScheduleEnabled, user, todos]);
+
   const getThemeClass = (l: string, d: string) => settings.theme === 'pure-white' ? l : d;
 
   const handleNewYearCommit = (newGoals: Todo[]) => {
@@ -559,41 +599,84 @@ const App: React.FC = () => {
               <input type="text" value={manualGoalInput} onChange={(e) => setManualGoalInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addGoalManually()} placeholder="Manual Intent Injection..." className="flex-1 bg-transparent border-none outline-none px-6 py-3 text-sm font-bold text-white" />
               <button onClick={addGoalManually} className="p-3 bg-white text-black rounded-full hover:scale-105 transition-all"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
             </div>
-            <div className="space-y-4">
-              {todos.filter(t => showCompleted ? true : !t.completed).map(t => (
-                <div key={t.id} className={`p-6 bg-zinc-900/40 border border-zinc-900 rounded-[2.5rem] flex items-center gap-5 hover:border-zinc-700 transition-all group ${t.completed ? 'opacity-40 grayscale' : ''}`}>
-                  {/* Checkbox to toggle completion */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTodos(prev => prev.map(todo => todo.id === t.id ? { ...todo, completed: !todo.completed } : todo));
-                      showSyncMessage(t.completed ? "Goal Reactivated" : "Goal Completed");
-                    }}
-                    className={`flex-shrink-0 w-8 h-8 rounded-lg border-2 transition-all ${t.completed ? 'bg-white border-white' : 'border-zinc-700 hover:border-zinc-500'}`}
-                  >
-                    {t.completed && <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
-                  </button>
-
-                  {/* Goal text - clickable to open edit modal */}
-                  <div onClick={() => setEditingTodo(t)} className="flex-1 min-w-0 cursor-pointer">
-                    <h3 className={`font-black text-xl truncate ${t.completed ? 'text-zinc-600 line-through' : 'text-white'}`}>{t.goal}</h3>
-                  </div>
-
-                  {/* Delete button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Delete goal: "${t.goal}"?`)) {
-                        setTodos(prev => prev.filter(todo => todo.id !== t.id));
-                        showSyncMessage("Goal Deleted");
-                      }
-                    }}
-                    className="flex-shrink-0 p-2 text-zinc-700 hover:text-red-500 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+            <div className="space-y-12">
+              {/* TODAY'S SIGNAL */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-3 px-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Today's Signal</h3>
                 </div>
-              ))}
+                <div className="space-y-3">
+                  {todos.filter(t => {
+                    if (t.completed) return false;
+                    const isToday = t.dueDate ? new Date(t.dueDate).toDateString() === new Date().toDateString() : t.category !== 'new-year';
+                    return isToday;
+                  }).map(t => (
+                    <div key={t.id} className="p-6 bg-zinc-900/40 border border-zinc-900 rounded-[2.5rem] flex items-center gap-5 hover:border-zinc-700 transition-all group">
+                      <button
+                        onClick={() => {
+                          setTodos(prev => prev.map(todo => todo.id === t.id ? { ...todo, completed: true } : todo));
+                          showSyncMessage("Goal Completed");
+                        }}
+                        className="flex-shrink-0 w-8 h-8 rounded-lg border-2 border-zinc-700 hover:border-zinc-500 transition-all"
+                      />
+                      <div onClick={() => setEditingTodo(t)} className="flex-1 min-w-0 cursor-pointer">
+                        <h3 className="font-black text-xl truncate text-white">{t.goal}</h3>
+                        {t.category === 'new-year' && <span className="text-[8px] font-black uppercase tracking-widest text-amber-500/60">2026 Registry Item</span>}
+                        {t.description && t.description.includes('Derived from') && <span className="text-[8px] font-black uppercase tracking-widest text-zinc-600 block mt-1">{t.description}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  {todos.filter(t => !t.completed && (t.dueDate ? new Date(t.dueDate).toDateString() === new Date().toDateString() : t.category !== 'new-year')).length === 0 && (
+                    <div className="py-12 text-center opacity-20 italic text-xs uppercase font-black tracking-widest border border-dashed border-zinc-900 rounded-[3rem]">No Active Signals</div>
+                  )}
+                </div>
+              </section>
+
+              {/* HIDDEN-E (Upcoming / Then) */}
+              <section className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 px-2">Hidden-E</h3>
+                <div className="space-y-3">
+                  {todos.filter(t => {
+                    if (t.completed || t.category === 'new-year') return false;
+                    const isToday = t.dueDate ? new Date(t.dueDate).toDateString() === new Date().toDateString() : true;
+                    return !isToday;
+                  }).map(t => (
+                    <div key={t.id} className="p-4 bg-zinc-900/20 border border-zinc-900/50 rounded-2xl flex items-center gap-4 opacity-60 hover:opacity-100 transition-all">
+                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
+                      <span className="text-sm font-bold text-zinc-400 truncate flex-1">{t.goal}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* TO-DO-Z (Yearly Registry) */}
+              <section className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-700 px-2">To-Do-Z</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {todos.filter(t => t.category === 'new-year' && !t.completed && (!t.dueDate || new Date(t.dueDate).toDateString() !== new Date().toDateString())).map(t => (
+                    <div key={t.id} className="p-4 bg-zinc-900/10 border border-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest text-zinc-600 flex items-center gap-3">
+                      <div className="w-1 h-1 rounded-full bg-zinc-800" />
+                      <span className="truncate">{t.goal}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* FINISHED-E */}
+              {showCompleted && (
+                <section className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-800 px-2">Finished-E</h3>
+                  <div className="space-y-2">
+                    {todos.filter(t => t.completed).map(t => (
+                      <div key={t.id} className="p-4 bg-zinc-900/10 border border-zinc-900/30 rounded-2xl flex items-center gap-4 opacity-30">
+                        <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        <span className="text-xs font-bold text-zinc-600 line-through truncate">{t.goal}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           </div>
         )}
@@ -721,6 +804,8 @@ const App: React.FC = () => {
           onAddDailyTask={(task) => setTodos(prev => [task, ...prev])}
           onAddGoal={() => { setShowYearlyDashboard(false); setShowNewYearWizard(true); }}
           user={user}
+          autoScheduleEnabled={settings.autoScheduleEnabled}
+          onToggleAutoSchedule={(enabled) => setSettings(prev => ({ ...prev, autoScheduleEnabled: enabled }))}
         />
       )}
 

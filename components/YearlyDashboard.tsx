@@ -9,32 +9,14 @@ interface YearlyDashboardProps {
     onAddDailyTask: (task: Todo) => void;
     onAddGoal: () => void;
     user: UserProfile | null;
+    autoScheduleEnabled: boolean;
+    onToggleAutoSchedule: (enabled: boolean) => void;
 }
 
-const YearlyDashboard: React.FC<YearlyDashboardProps> = ({ goals, dailyTodos, onClose, onAddDailyTask, onAddGoal, user }) => {
-    const [processingId, setProcessingId] = useState<string | null>(null);
-
+const YearlyDashboard: React.FC<YearlyDashboardProps> = ({ goals, dailyTodos, onClose, onAddDailyTask, onAddGoal, user, autoScheduleEnabled, onToggleAutoSchedule }) => {
     const overallProgress = goals.length > 0
         ? Math.round(goals.reduce((acc, g) => acc + (g.progress || 0), 0) / goals.length)
         : 0;
-
-    const handleSmartSchedule = async (goal: Todo) => {
-        if (processingId) return;
-        setProcessingId(goal.id);
-        try {
-            const newTask = await smartScheduleGoal(goal, dailyTodos, user || undefined);
-            if (newTask) {
-                onAddDailyTask(newTask);
-                alert(`Scheduled: "${newTask.goal}" for today!`);
-            } else {
-                alert("Could not schedule task. Try again.");
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setProcessingId(null);
-        }
-    };
 
     return (
         <div className="fixed inset-0 z-[90] bg-black flex flex-col animate-in slide-in-from-bottom duration-500">
@@ -56,6 +38,20 @@ const YearlyDashboard: React.FC<YearlyDashboardProps> = ({ goals, dailyTodos, on
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {/* Auto-Architect Toggle */}
+                <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[2rem] flex items-center justify-between gap-6">
+                    <div className="flex-1">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-white mb-1">Neural Auto-Architect</h3>
+                        <p className="text-[10px] text-zinc-500 font-medium leading-relaxed">AI will autonomously inject yearly goals into your daily registry based on your cognitive patterns and priority.</p>
+                    </div>
+                    <button
+                        onClick={() => onToggleAutoSchedule(!autoScheduleEnabled)}
+                        className={`w-16 h-8 rounded-full transition-all relative ${autoScheduleEnabled ? 'bg-amber-500' : 'bg-zinc-800'}`}
+                    >
+                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${autoScheduleEnabled ? 'left-9 shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'left-1'}`} />
+                    </button>
+                </div>
+
                 {/* Overview Card */}
                 <div className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 p-8 rounded-[2.5rem] relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[80px] rounded-full pointer-events-none" />
@@ -83,31 +79,14 @@ const YearlyDashboard: React.FC<YearlyDashboardProps> = ({ goals, dailyTodos, on
                             </div>
 
                             {/* Progress for this goal */}
-                            <div className="mb-6">
+                            <div className="mt-2">
                                 <div className="flex justify-between text-[10px] uppercase font-black text-zinc-500 mb-2">
                                     <span>Progress</span>
                                     <span>{goal.progress || 0}%</span>
                                 </div>
-                                <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                                     <div className="h-full bg-amber-500/80" style={{ width: `${goal.progress || 0}%` }} />
                                 </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => handleSmartSchedule(goal)}
-                                    disabled={!!processingId}
-                                    className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
-                                >
-                                    {processingId === goal.id ? (
-                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <span>⚡ Smart Schedule</span>
-                                        </>
-                                    )}
-                                </button>
                             </div>
                         </div>
                     ))}
