@@ -22,10 +22,9 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    // Live Voice State
-    const [liveTranscript, setLiveTranscript] = useState('');
-    const recognitionRef = useRef<any>(null);
-    const lastProcessedIndex = useRef(0);
+    // Voice State
+    const [recordDuration, setRecordDuration] = useState(0);
+    const timerRef = useRef<any>(null);
 
     // Audio Refs (for legacy fallback if needed)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -89,77 +88,65 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
         }
     };
 
-    // Live Voice Logic
-    const startLiveVoice = () => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert("Speech recognition not supported in this browser.");
-            return;
-        }
-
-        // @ts-ignore
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-
-        recognition.onresult = (event: any) => {
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript + ' ';
-                }
-            }
-            if (finalTranscript) {
-                setLiveTranscript(prev => {
-                    const newText = prev + finalTranscript;
-                    processLiveText(newText);
-                    return newText;
-                });
-            }
-        };
-
-        recognition.start();
-        recognitionRef.current = recognition;
-        setIsRecording(true);
-    };
-
-    const stopLiveVoice = () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            setIsRecording(false);
-        }
-    };
-
-    const processLiveText = async (fullText: string) => {
-        const newText = fullText.slice(lastProcessedIndex.current);
-        if (newText.length < 15) return;
-
-        lastProcessedIndex.current = fullText.length;
-
+    // Voice Logic (Record then Process)
+    const startVoice = async () => {
         try {
-            const newGoals = await extractTasks(newText, [], patterns || { frequentLabels: [], preferredLanguage: 'English', lastActionType: 'Inception', averageTaskComplexity: 1 }, user || undefined, 'new-year');
-            if (newGoals.length > 0) {
-                setGeneratedGoals(prev => [
-                    ...prev,
-                    ...newGoals.map(g => ({
-                        ...g,
-                        id: Math.random().toString(36).substring(2, 11),
-                        isLocked: true,
-                        progress: 0,
-                        createdAt: new Date().toISOString()
-                    }))
-                ]);
-            }
-        } catch (e) {
-            console.error("Live processing error:", e);
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            mediaRecorderRef.current = recorder;
+            audioChunksRef.current = [];
+
+            recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+            recorder.onstop = async () => {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                setStep('processing');
+
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = async () => {
+                    const base64 = (reader.result as string).split(',')[1];
+                    try {
+                        const result = await extractTasksFromAudio(base64, 'audio/webm', [], patterns || undefined, user || undefined);
+                        const goals = result.tasks.map(t => ({
+                            ...t,
+                            id: Math.random().toString(36).substring(2, 11),
+                            category: 'new-year' as const,
+                            isLocked: true,
+                            progress: 0,
+                            createdAt: new Date().toISOString()
+                        }));
+                        setGeneratedGoals(goals);
+                        setStep('review');
+                    } catch (err) {
+                        console.error(err);
+                        setStep('input');
+                        alert("Failed to process audio signal.");
+                    }
+                };
+                stream.getTracks().forEach(t => t.stop());
+            };
+
+            recorder.start();
+            setIsRecording(true);
+            setRecordDuration(0);
+            timerRef.current = setInterval(() => setRecordDuration(p => p + 1), 1000);
+        } catch (err) {
+            alert("Microphone access denied.");
+        }
+    };
+
+    const stopVoice = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            if (timerRef.current) clearInterval(timerRef.current);
         }
     };
 
     useEffect(() => {
         return () => {
             stopCamera();
-            stopLiveVoice();
+            stopVoice();
         };
     }, [stopCamera]);
 
@@ -231,11 +218,14 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                         {mode === 'voice' && (
                             <div className="flex flex-col items-center gap-6 w-full">
                                 <button
-                                    onClick={isRecording ? stopLiveVoice : startLiveVoice}
+                                    onClick={isRecording ? stopVoice : startVoice}
                                     className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${isRecording ? 'bg-red-500 scale-110 shadow-[0_0_50px_rgba(239,68,68,0.5)]' : 'bg-zinc-900 border-2 border-zinc-800 hover:border-amber-500/50'}`}
                                 >
                                     {isRecording ? (
-                                        <div className="w-12 h-12 bg-white rounded-sm animate-pulse" />
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="w-12 h-12 bg-white rounded-sm animate-pulse" />
+                                            <span className="text-[10px] font-black text-white">{recordDuration}s</span>
+                                        </div>
                                     ) : (
                                         <svg className="w-16 h-16 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                                     )}

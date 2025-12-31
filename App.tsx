@@ -19,6 +19,7 @@ import NewYearPopup from './components/NewYearPopup';
 import NewYearWizard from './components/NewYearWizard';
 import YearlyDashboard from './components/YearlyDashboard';
 import MissedTasksPopup from './components/MissedTasksPopup';
+import UserTour from './components/UserTour';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.Landing);
@@ -54,6 +55,7 @@ const App: React.FC = () => {
   const [showYearlyDashboard, setShowYearlyDashboard] = useState(false);
   const [missedTasks, setMissedTasks] = useState<Todo[]>([]);
   const [showMissedPopup, setShowMissedPopup] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   const [settings, setSettings] = useState<GTDSettings>({
     language: 'en',
@@ -215,7 +217,13 @@ const App: React.FC = () => {
           setUser(updatedUser);
           localStorage.setItem('gtd_user', JSON.stringify(updatedUser));
         }
-        setTimeout(() => setShowMissedPopup(true), 1500);
+        // Popup removed as per user request - missed tasks still visible in Unfinished-Z section
+      }
+
+      // Check for Tour
+      const hasSeenTour = localStorage.getItem('gtd_tour_seen');
+      if (!hasSeenTour && (savedUser || guestMode)) {
+        setTimeout(() => setShowTour(true), 3000);
       }
 
       requestNotificationPermission();
@@ -559,6 +567,7 @@ const App: React.FC = () => {
         {/* Settings & Dashboard Buttons */}
         <div className="flex items-center gap-2">
           <button
+            id="year-button"
             onClick={() => setShowYearlyDashboard(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-zinc-900 transition-all group border border-amber-500/20 hover:border-amber-500/50"
           >
@@ -597,6 +606,7 @@ const App: React.FC = () => {
             </div>
 
             <button
+              id="voice-trigger"
               onClick={() => toggleRecording(false)}
               className={`w-48 h-48 sm:w-80 sm:h-80 rounded-full flex items-center justify-center transition-all duration-700 relative ${isRecording ? 'bg-red-500 scale-105 shadow-[0_0_80px_rgba(239,68,68,0.4)]' : 'bg-zinc-900 border-2 border-zinc-800 hover:border-zinc-700 shadow-2xl'}`}
             >
@@ -803,13 +813,13 @@ const App: React.FC = () => {
       <nav className="h-24 border-t border-zinc-900 bg-black/80 backdrop-blur-3xl fixed bottom-0 left-0 right-0 flex flex-col items-center justify-center gap-1 z-50">
         <div className="flex justify-around items-center w-full px-4">
           {[
-            { m: AppMode.Notes, icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" },
-            { m: AppMode.List, icon: "M4 6h16M4 10h16M4 14h16M4 18h16" },
-            { m: AppMode.Scan, icon: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" },
-            { m: AppMode.Chat, icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" },
-            { m: AppMode.Calendar, icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" }
-          ].map(({ m, icon }) => (
-            <button key={m} onClick={() => setMode(m)} className={`p-4 rounded-[1.5rem] transition-all ${mode === m ? 'bg-white text-black scale-110 shadow-lg' : 'text-zinc-600 hover:text-zinc-400'}`}>
+            { m: AppMode.Notes, icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z", id: "nav-notes" },
+            { m: AppMode.List, icon: "M4 6h16M4 10h16M4 14h16M4 18h16", id: "nav-list" },
+            { m: AppMode.Scan, icon: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z", id: "nav-scan" },
+            { m: AppMode.Chat, icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z", id: "nav-chat" },
+            { m: AppMode.Calendar, icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z", id: "nav-calendar" }
+          ].map(({ m, icon, id }) => (
+            <button key={m} id={id} onClick={() => setMode(m)} className={`p-4 rounded-[1.5rem] transition-all ${mode === m ? 'bg-white text-black scale-110 shadow-lg' : 'text-zinc-600 hover:text-zinc-400'}`}>
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={2} d={icon} /></svg>
             </button>
           ))}
@@ -891,6 +901,15 @@ const App: React.FC = () => {
           missedTasks={missedTasks}
           consistencyScore={user?.consistencyScore ?? 100}
           onAcknowledge={() => setShowMissedPopup(false)}
+        />
+      )}
+
+      {showTour && (
+        <UserTour
+          onComplete={() => {
+            setShowTour(false);
+            localStorage.setItem('gtd_tour_seen', 'true');
+          }}
         />
       )}
 
