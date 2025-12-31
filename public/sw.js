@@ -1,10 +1,10 @@
 
-const CACHE_NAME = 'gtd-aura-v2.1';
+const CACHE_NAME = 'gtd-aura-v2.2';
 const ASSETS = [
-    './',
-    './index.html',
-    './manifest.json',
-    './icon.svg'
+    '/',
+    '/index.html',
+    '/manifest.json',
+    '/icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -57,7 +57,7 @@ self.addEventListener('fetch', (event) => {
             }).catch(() => {
                 // SPA Fallback: if it's a document request, return index.html
                 if (event.request.destination === 'document') {
-                    return caches.match('./');
+                    return caches.match('/');
                 }
                 return new Response('Offline', { status: 503 });
             });
