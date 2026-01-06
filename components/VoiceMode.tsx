@@ -9,6 +9,7 @@ interface VoiceModeProps {
   initialHistory: ChatMessage[];
   onHistoryUpdate: (history: ChatMessage[]) => void;
   onTasksUpdated: (tasks: Todo[]) => void;
+  onToggleTask: (taskId: string) => void;
   onCalendarSynced: (msg: string) => void;
   onSettingsUpdate: (settings: GTDSettings) => void;
   settings: GTDSettings;
@@ -37,7 +38,7 @@ const EYE_COLOR_CLASSES: Record<EyeColor, string> = {
   'red': 'bg-red-500 shadow-[0_0_60px_rgba(239,68,68,0.8)]'
 };
 
-const VoiceMode: React.FC<VoiceModeProps> = ({ onClose, todos, settings, onTasksUpdated, onSettingsUpdate }) => {
+const VoiceMode: React.FC<VoiceModeProps> = ({ onClose, todos, settings, onTasksUpdated, onToggleTask, onSettingsUpdate }) => {
   const [isActive, setIsActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0);
@@ -382,10 +383,7 @@ CONVERSATIONAL DISCERNMENT PROTOCOL:
                 <div key={t.id} className={`p-6 bg-zinc-900/30 border border-white/5 rounded-[2rem] hover:border-white/10 transition-all group flex items-center gap-4 ${t.completed ? 'opacity-40' : ''}`}>
                   {/* Checkbox to toggle completion */}
                   <button
-                    onClick={() => {
-                      const updated = todos.map(todo => todo.id === t.id ? { ...todo, completed: !todo.completed } : todo);
-                      onTasksUpdated(updated);
-                    }}
+                    onClick={() => onToggleTask(t.id)}
                     className={`flex-shrink-0 w-7 h-7 rounded-lg border-2 transition-all ${t.completed ? 'bg-white border-white' : 'border-zinc-700 hover:border-zinc-500'}`}
                   >
                     {t.completed && <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}

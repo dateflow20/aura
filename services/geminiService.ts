@@ -579,7 +579,8 @@ export const smartScheduleGoal = async (goal: Todo, dailyTodos: Todo[], user?: U
       completed: false,
       createdAt: new Date().toISOString(),
       category: 'daily',
-      description: `Derived from Yearly Goal: ${goal.goal}`
+      description: `Derived from Yearly Goal: ${goal.goal}`,
+      parentGoalId: goal.id
     };
   } catch (e) {
     console.error("Smart Schedule failed:", e);

@@ -472,6 +472,49 @@ const App: React.FC = () => {
     }
   };
 
+  const handleToggleTask = (taskId: string) => {
+    setTodos(prev => {
+      const task = prev.find(t => t.id === taskId);
+      if (!task) return prev;
+
+      const newCompletedState = !task.completed;
+
+      // 1. Update the task itself
+      const updatedTodos = prev.map(t => t.id === taskId ? { ...t, completed: newCompletedState } : t);
+
+      // 2. If it has a parent goal, update the parent's progress
+      if (task.parentGoalId) {
+        const parent = updatedTodos.find(t => t.id === task.parentGoalId);
+        if (parent) {
+          const currentProgress = parent.progress || 0;
+          // Increment by 5% if completed, decrement by 5% if uncompleted
+          const adjustment = newCompletedState ? 5 : -5;
+          const newProgress = Math.max(0, Math.min(100, currentProgress + adjustment));
+
+          return updatedTodos.map(t =>
+            t.id === parent.id
+              ? { ...t, progress: newProgress }
+              : t
+          );
+        }
+      }
+
+      return updatedTodos;
+    });
+
+    // Show appropriate message
+    const task = todos.find(t => t.id === taskId);
+    if (task && !task.completed) {
+      if (task.parentGoalId) {
+        showSyncMessage("Progress Recorded (+5%)");
+      } else if (task.category === 'new-year') {
+        showSyncMessage("Resolution Achieved");
+      } else {
+        showSyncMessage("Goal Completed");
+      }
+    }
+  };
+
   const runAutoArchitect = async () => {
     if (!settings.autoScheduleEnabled || !user) return;
 
@@ -654,10 +697,7 @@ const App: React.FC = () => {
                   }).map(t => (
                     <div key={t.id} className="p-6 bg-zinc-900/40 border border-zinc-900 rounded-[2.5rem] flex items-center gap-5 hover:border-zinc-700 transition-all group">
                       <button
-                        onClick={() => {
-                          setTodos(prev => prev.map(todo => todo.id === t.id ? { ...todo, completed: true } : todo));
-                          showSyncMessage("Goal Completed");
-                        }}
+                        onClick={() => handleToggleTask(t.id)}
                         className="flex-shrink-0 w-8 h-8 rounded-lg border-2 border-zinc-700 hover:border-zinc-500 transition-all"
                       />
                       <div onClick={() => setEditingTodo(t)} className="flex-1 min-w-0 cursor-pointer">
@@ -719,10 +759,7 @@ const App: React.FC = () => {
                       }).map(t => (
                         <div key={t.id} className="p-6 bg-red-500/5 border border-red-500/10 rounded-[2.5rem] flex items-center gap-5 hover:border-red-500/30 transition-all group">
                           <button
-                            onClick={() => {
-                              setTodos(prev => prev.map(todo => todo.id === t.id ? { ...todo, completed: true } : todo));
-                              showSyncMessage("Signal Restored");
-                            }}
+                            onClick={() => handleToggleTask(t.id)}
                             className="flex-shrink-0 w-8 h-8 rounded-lg border-2 border-red-900/30 hover:border-red-500 transition-all"
                           />
                           <div onClick={() => setEditingTodo(t)} className="flex-1 min-w-0 cursor-pointer">
@@ -820,7 +857,7 @@ const App: React.FC = () => {
         <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
       </button>
 
-      {mode === AppMode.Voice && <VoiceMode settings={settings} initialHistory={voiceHistory} onHistoryUpdate={setVoiceHistory} onClose={() => setMode(AppMode.Notes)} todos={todos} onTasksUpdated={setTodos} onCalendarSynced={() => { }} onSettingsUpdate={setSettings} />}
+      {mode === AppMode.Voice && <VoiceMode settings={settings} initialHistory={voiceHistory} onHistoryUpdate={setVoiceHistory} onClose={() => setMode(AppMode.Notes)} todos={todos} onTasksUpdated={setTodos} onToggleTask={handleToggleTask} onCalendarSynced={() => { }} onSettingsUpdate={setSettings} />}
 
       {/* Settings Panel */}
       {showSettings && (

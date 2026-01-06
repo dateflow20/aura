@@ -20,6 +20,7 @@ export interface Todo {
   category?: 'daily' | 'new-year';
   isLocked?: boolean;
   progress?: number; // 0-100
+  parentGoalId?: string; // Links daily task to a yearly goal
 }
 
 export interface NeuralPattern {

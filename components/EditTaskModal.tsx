@@ -40,7 +40,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ todo, onSave, onClose, on
       priority,
       dueDate: finalDueDate,
       steps,
-      pinned
+      pinned,
+      progress: steps.length > 0 ? Math.round((steps.filter(s => s.completed).length / steps.length) * 100) : todo.progress
     });
   };
 
