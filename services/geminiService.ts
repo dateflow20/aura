@@ -88,7 +88,9 @@ const GOAL_SCHEMA = {
               },
               required: ["text", "completed"]
             }
-          }
+          },
+          targetValue: { type: Type.NUMBER, description: "Target number for quantitative goals" },
+          unit: { type: Type.STRING, description: "Unit for quantitative goals (e.g., $, followers)" }
         },
         required: ["goal", "priority", "completed"]
       }
@@ -437,7 +439,7 @@ export const extractTasksFromAudio = async (base64Audio: string, mimeType: strin
 };
 
 export const extractTasksFromImage = async (base64Image: string, mimeType: string, currentTodos: Todo[], patterns?: NeuralPattern, user?: UserProfile): Promise<Todo[]> => {
-  const promptText = `${getSystemInstruction(patterns, user, true)}\n\nAnalyze this image and extract any clear tasks, goals, or action items. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}`;
+  const promptText = `${getSystemInstruction(patterns, user, true)}\n\nAnalyze this image and extract any clear tasks, goals, or action items. Current Registry: ${JSON.stringify(currentTodos.map(t => t.goal))}\n\nFor each goal, if it involves a number (e.g., "1000 followers", "$500"), extract the targetValue and unit.`;
 
   // 1. Try Gemini Vision (Primary)
   try {
@@ -565,25 +567,78 @@ export const smartScheduleGoal = async (goal: Todo, dailyTodos: Todo[], user?: U
   
   Create a SINGLE, small, actionable sub-task that I can do TODAY to make progress on this yearly goal.
   It should be easy and take less than 30 minutes.
-  Return ONLY the task text.
+  
+  Also, estimate how much this specific task contributes to the overall 100% completion of the yearly goal. 
+  Return a JSON object: { "task": "string", "weight": number (1-10) }
   `;
 
   try {
-    const response = await callAiWithFallback(prompt, { responseMimeType: "text/plain" }, undefined, user, false);
+    const response = await callAiWithFallback(prompt, { responseMimeType: "application/json" }, undefined, user, true);
     if (!response) return null;
+    const parsed = JSON.parse(response);
 
     return {
       id: Math.random().toString(36).substring(2, 11),
-      goal: response.trim(),
+      goal: parsed.task || response.trim(),
       priority: 'medium',
       completed: false,
       createdAt: new Date().toISOString(),
       category: 'daily',
       description: `Derived from Yearly Goal: ${goal.goal}`,
-      parentGoalId: goal.id
+      parentGoalId: goal.id,
+      progressWeight: parsed.weight || 5
     };
   } catch (e) {
     console.error("Smart Schedule failed:", e);
     return null;
+  }
+};
+
+export const analyzeGoalProgress = async (goal: Todo, update: string, image?: { base64: string, mimeType: string }, user?: UserProfile): Promise<{ progress: number, currentValue?: number }> => {
+  const prompt = `
+  Goal: "${goal.goal}"
+  Current Progress: ${goal.progress}%
+  Target Value: ${goal.targetValue || 'Not specified'}
+  Current Value: ${goal.currentValue || 'Not specified'}
+  
+  User Update: "${update}"
+  
+  Analyze the user's update (and image if provided) to determine their new progress.
+  If the goal is quantitative (e.g., money, followers), extract the new current value.
+  If the goal is qualitative, estimate the new total progress percentage based on the update.
+  
+  Return a JSON object: { "progress": number (0-100), "currentValue": number (optional) }
+  `;
+
+  try {
+    let response: string;
+    if (image) {
+      const keys = [import.meta.env.VITE_GEMINI_API_KEY, import.meta.env.VITE_GEMINI_API_KEY_2].filter(Boolean);
+      const ai = new GoogleGenAI({ apiKey: keys[0] });
+      const result = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: {
+          parts: [
+            { inlineData: { data: image.base64, mimeType: image.mimeType } },
+            { text: prompt }
+          ]
+        },
+        config: { responseMimeType: "application/json" }
+      });
+      response = result.text;
+    } else {
+      response = await callAiWithFallback(prompt, { responseMimeType: "application/json" }, undefined, user, true);
+    }
+
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response);
+
+    return {
+      progress: Math.min(100, Math.max(0, parsed.progress)),
+      currentValue: parsed.currentValue
+    };
+  } catch (e) {
+    console.error("Progress analysis failed:", e);
+    return { progress: goal.progress || 0 };
   }
 };

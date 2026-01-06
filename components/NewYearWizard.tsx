@@ -74,6 +74,8 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                 category: 'new-year' as const,
                 isLocked: true,
                 progress: 0,
+                targetValue: t.targetValue,
+                unit: t.unit,
                 createdAt: new Date().toISOString()
             }));
             setGeneratedGoals(goals);
@@ -148,6 +150,8 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                             id: Math.random().toString(36).substring(2, 11),
                             isLocked: true,
                             progress: 0,
+                            targetValue: g.targetValue,
+                            unit: g.unit,
                             createdAt: new Date().toISOString()
                         }))
                     ];
@@ -175,6 +179,8 @@ const NewYearWizard: React.FC<NewYearWizardProps> = ({ onClose, onCommit, user, 
                 id: Math.random().toString(36).substring(2, 11),
                 isLocked: true,
                 progress: 0,
+                targetValue: g.targetValue,
+                unit: g.unit,
                 createdAt: new Date().toISOString()
             })));
             setStep('review');

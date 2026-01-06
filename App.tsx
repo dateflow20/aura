@@ -487,8 +487,9 @@ const App: React.FC = () => {
         const parent = updatedTodos.find(t => t.id === task.parentGoalId);
         if (parent) {
           const currentProgress = parent.progress || 0;
-          // Increment by 5% if completed, decrement by 5% if uncompleted
-          const adjustment = newCompletedState ? 5 : -5;
+          // Use intelligent weight or default to 5%
+          const weight = task.progressWeight || 5;
+          const adjustment = newCompletedState ? weight : -weight;
           const newProgress = Math.max(0, Math.min(100, currentProgress + adjustment));
 
           return updatedTodos.map(t =>
@@ -506,12 +507,38 @@ const App: React.FC = () => {
     const task = todos.find(t => t.id === taskId);
     if (task && !task.completed) {
       if (task.parentGoalId) {
-        showSyncMessage("Progress Recorded (+5%)");
+        showSyncMessage(`Progress Recorded (+${task.progressWeight || 5}%)`);
       } else if (task.category === 'new-year') {
         showSyncMessage("Resolution Achieved");
       } else {
         showSyncMessage("Goal Completed");
       }
+    }
+  };
+
+  const handleUpdateGoalProgress = async (goalId: string, update: string, image?: { base64: string, mimeType: string }) => {
+    const goal = todos.find(t => t.id === goalId);
+    if (!goal) return;
+
+    setIsProcessing(true);
+    showSyncMessage("Analyzing Progress...");
+
+    try {
+      const { analyzeGoalProgress } = await import('./services/geminiService');
+      const result = await analyzeGoalProgress(goal, update, image, user || undefined);
+
+      setTodos(prev => prev.map(t => t.id === goalId ? {
+        ...t,
+        progress: result.progress,
+        currentValue: result.currentValue ?? t.currentValue
+      } : t));
+
+      showSyncMessage(`Neural Registry Updated: ${result.progress}%`);
+    } catch (e) {
+      console.error("Progress update failed:", e);
+      showSyncMessage("Analysis Failed");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -912,6 +939,7 @@ const App: React.FC = () => {
           onClose={() => setShowYearlyDashboard(false)}
           onAddDailyTask={(task) => setTodos(prev => [task, ...prev])}
           onAddGoal={() => { setShowYearlyDashboard(false); setShowNewYearWizard(true); }}
+          onUpdateProgress={handleUpdateGoalProgress}
           user={user}
           autoScheduleEnabled={settings.autoScheduleEnabled}
           onToggleAutoSchedule={(enabled) => setSettings(prev => ({ ...prev, autoScheduleEnabled: enabled }))}

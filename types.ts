@@ -21,6 +21,10 @@ export interface Todo {
   isLocked?: boolean;
   progress?: number; // 0-100
   parentGoalId?: string; // Links daily task to a yearly goal
+  progressWeight?: number; // How much this specific task contributes to the parent goal (e.g., 2, 5, 10)
+  targetValue?: number; // For quantitative goals (e.g., 1000)
+  currentValue?: number; // For quantitative goals (e.g., 500)
+  unit?: string; // For quantitative goals (e.g., "$", "followers")
 }
 
 export interface NeuralPattern {
